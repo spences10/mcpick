@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+.git/
+.DS_Store
+pnpm-lock.yaml
+*.tgz

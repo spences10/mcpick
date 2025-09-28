@@ -1,0 +1,66 @@
+import { access, readFile, writeFile } from 'node:fs/promises';
+import { ClaudeConfig, McpServer } from '../types.js';
+import { get_claude_config_path } from '../utils/paths.js';
+import { validate_claude_config } from './validation.js';
+
+export async function read_claude_config(): Promise<ClaudeConfig> {
+	const config_path = get_claude_config_path();
+
+	try {
+		await access(config_path);
+		const config_content = await readFile(config_path, 'utf-8');
+		const parsed_config = JSON.parse(config_content);
+		return validate_claude_config(parsed_config);
+	} catch (error) {
+		if (
+			error instanceof Error &&
+			'code' in error &&
+			error.code === 'ENOENT'
+		) {
+			return { mcpServers: {} };
+		}
+		throw error;
+	}
+}
+
+export async function write_claude_config(
+	config: ClaudeConfig,
+): Promise<void> {
+	const config_path = get_claude_config_path();
+	const config_content = JSON.stringify(config, null, 2);
+	await writeFile(config_path, config_content, 'utf-8');
+}
+
+export function get_enabled_servers(
+	config: ClaudeConfig,
+): McpServer[] {
+	if (!config.mcpServers) {
+		return [];
+	}
+
+	return Object.entries(config.mcpServers).map(([name, server]) => ({
+		...server,
+		name,
+	}));
+}
+
+export function create_config_from_servers(
+	selected_servers: McpServer[],
+): ClaudeConfig {
+	const mcp_servers: { [key: string]: Omit<McpServer, 'name'> } = {};
+
+	selected_servers.forEach((server) => {
+		const { name, ...server_config } = server;
+		mcp_servers[name] = server_config;
+	});
+
+	return { mcpServers: mcp_servers };
+}
+
+export function calculate_token_estimate(
+	servers: McpServer[],
+): number {
+	return servers.reduce((total, server) => {
+		return total + (server.estimated_tokens || 0);
+	}, 0);
+}
