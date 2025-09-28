@@ -1,4 +1,4 @@
-import { confirm, note, text } from '@clack/prompts';
+import { confirm, note, select, text } from '@clack/prompts';
 import { add_server_to_registry } from '../core/registry.js';
 import { validate_mcp_server } from '../core/validation.js';
 import { McpServer } from '../types.js';
@@ -51,33 +51,108 @@ export async function add_server(): Promise<void> {
 
 		if (typeof description === 'symbol') return;
 
-		const estimated_tokens_input = await text({
-			message: 'Estimated tokens (optional):',
-			placeholder: 'e.g., 5000',
-			validate: (value) => {
-				if (value && value.trim().length > 0) {
-					const num = parseInt(value.trim());
-					if (isNaN(num) || num < 0) {
-						return 'Must be a positive number';
-					}
-				}
-				return undefined;
-			},
+		// Advanced configuration
+		const configure_advanced = await confirm({
+			message:
+				'Configure advanced settings (env variables, transport, etc.)?',
+			initialValue: false,
 		});
 
-		if (typeof estimated_tokens_input === 'symbol') return;
+		if (typeof configure_advanced === 'symbol') return;
 
-		const server_data: Partial<McpServer> = {
+		let server_data: Partial<McpServer> = {
 			name: name.trim(),
 			command: command.trim(),
 			args,
 			...(description &&
 				description.trim() && { description: description.trim() }),
-			...(estimated_tokens_input &&
-				estimated_tokens_input.trim() && {
-					estimated_tokens: parseInt(estimated_tokens_input.trim()),
-				}),
 		};
+
+		if (configure_advanced) {
+			// Transport type
+			const transport_type = await select({
+				message: 'Transport type:',
+				options: [
+					{
+						value: 'stdio',
+						label: 'stdio (default)',
+						hint: 'Standard input/output',
+					},
+					{ value: 'sse', label: 'sse', hint: 'Server-sent events' },
+					{ value: 'http', label: 'http', hint: 'HTTP transport' },
+				],
+				initialValue: 'stdio',
+			});
+
+			if (typeof transport_type === 'symbol') return;
+
+			if (transport_type !== 'stdio') {
+				server_data.type = transport_type as 'sse' | 'http';
+			}
+
+			// URL for non-stdio transports
+			if (transport_type !== 'stdio') {
+				const url = await text({
+					message: 'Server URL:',
+					placeholder: 'e.g., http://localhost:3000',
+					validate: (value) => {
+						if (!value || value.trim().length === 0) {
+							return 'URL is required for non-stdio transport';
+						}
+						return undefined;
+					},
+				});
+
+				if (typeof url === 'symbol') return;
+				server_data.url = url.trim();
+			}
+
+			// Environment variables
+			const env_input = await text({
+				message:
+					'Environment variables (KEY=value, comma-separated):',
+				placeholder: 'e.g., API_KEY=abc123, TIMEOUT=30',
+			});
+
+			if (typeof env_input === 'symbol') return;
+
+			if (env_input && env_input.trim()) {
+				const env: Record<string, string> = {};
+				env_input.split(',').forEach((pair) => {
+					const [key, ...valueParts] = pair.split('=');
+					if (key && valueParts.length > 0) {
+						env[key.trim()] = valueParts.join('=').trim();
+					}
+				});
+				if (Object.keys(env).length > 0) {
+					server_data.env = env;
+				}
+			}
+
+			// Headers for HTTP transport
+			if (transport_type === 'http') {
+				const headers_input = await text({
+					message: 'HTTP headers (KEY=value, comma-separated):',
+					placeholder:
+						'e.g., Authorization=Bearer token, Content-Type=application/json',
+				});
+
+				if (typeof headers_input === 'symbol') return;
+
+				if (headers_input && headers_input.trim()) {
+					const headers: Record<string, string> = {};
+					headers_input.split(',').forEach((pair) => {
+						const [key, ...valueParts] = pair.split('=');
+						if (key && valueParts.length > 0) {
+							headers[key.trim()] = valueParts.join('=').trim();
+						}
+					});
+					if (Object.keys(headers).length > 0) {
+						server_data.headers = headers;
+					}
+				}
+			}
+		}
 
 		const validated_server = validate_mcp_server(server_data);
 
