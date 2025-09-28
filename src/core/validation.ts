@@ -5,7 +5,6 @@ export const mcp_server_schema = v.object({
 	command: v.pipe(v.string(), v.minLength(1)),
 	args: v.array(v.string()),
 	description: v.optional(v.string()),
-	estimated_tokens: v.optional(v.number()),
 });
 
 export const claude_config_schema = v.object({
@@ -26,7 +25,6 @@ export const claude_config_schema = v.object({
 				url: v.optional(v.string()),
 				headers: v.optional(v.record(v.string(), v.string())),
 				description: v.optional(v.string()),
-				estimated_tokens: v.optional(v.number()),
 			}),
 		),
 	),

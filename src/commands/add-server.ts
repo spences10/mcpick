@@ -87,10 +87,7 @@ export async function add_server(): Promise<void> {
 				`Command: ${
 					validated_server.command
 				} ${validated_server.args.join(' ')}\n` +
-				`Description: ${validated_server.description || 'None'}\n` +
-				`Estimated tokens: ${
-					validated_server.estimated_tokens || 'Unknown'
-				}`,
+				`Description: ${validated_server.description || 'None'}`,
 		);
 
 		const should_add = await confirm({

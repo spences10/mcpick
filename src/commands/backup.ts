@@ -1,18 +1,18 @@
 import { note } from '@clack/prompts';
-import { copyFile, readdir, unlink } from 'node:fs/promises';
+import { readdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { read_claude_config } from '../core/config.js';
 import {
 	ensure_directory_exists,
 	get_backup_filename,
 	get_backups_dir,
-	get_claude_config_path,
 } from '../utils/paths.js';
 
 const MAX_BACKUPS = 10;
 
 export async function backup_config(): Promise<void> {
 	try {
-		const config_path = get_claude_config_path();
+		const current_config = await read_claude_config();
 		const backups_dir = get_backups_dir();
 
 		await ensure_directory_exists(backups_dir);
@@ -20,19 +20,22 @@ export async function backup_config(): Promise<void> {
 		const backup_filename = get_backup_filename();
 		const backup_path = join(backups_dir, backup_filename);
 
-		await copyFile(config_path, backup_path);
+		const mcp_backup = {
+			mcpServers: current_config.mcpServers || {},
+		};
+
+		const backup_content = JSON.stringify(mcp_backup, null, 2);
+		await writeFile(backup_path, backup_content, 'utf-8');
 
 		await cleanup_old_backups();
 
-		note(`Configuration backed up to:\n${backup_path}`);
+		const server_count = Object.keys(
+			current_config.mcpServers || {},
+		).length;
+		note(
+			`MCP servers backup created:\n${backup_path}\n(${server_count} servers backed up)`,
+		);
 	} catch (error) {
-		if (
-			error instanceof Error &&
-			'code' in error &&
-			error.code === 'ENOENT'
-		) {
-			throw new Error('No .claude.json file found to backup');
-		}
 		throw new Error(
 			`Failed to create backup: ${
 				error instanceof Error ? error.message : 'Unknown error'

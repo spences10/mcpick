@@ -1,6 +1,5 @@
 import { multiselect, note } from '@clack/prompts';
 import {
-	calculate_token_estimate,
 	create_config_from_servers,
 	get_enabled_servers,
 	read_claude_config,
@@ -41,9 +40,7 @@ export async function edit_config(): Promise<void> {
 
 		const server_choices = all_servers.map((server) => ({
 			value: server.name,
-			label: `${server.name} (${
-				server.estimated_tokens || 'unknown'
-			} tokens)`,
+			label: server.name,
 			hint: server.description || '',
 		}));
 
@@ -67,17 +64,9 @@ export async function edit_config(): Promise<void> {
 
 		await sync_servers_to_registry(selected_servers);
 
-		const current_servers = get_enabled_servers(current_config);
-		const old_token_count = calculate_token_estimate(current_servers);
-		const new_token_count =
-			calculate_token_estimate(selected_servers);
-
 		note(
 			`Configuration updated!\n` +
-				`Enabled servers: ${selected_servers.length}\n` +
-				`Token estimate: ${old_token_count} → ${new_token_count} (${
-					new_token_count - old_token_count >= 0 ? '+' : ''
-				}${new_token_count - old_token_count})`,
+				`Enabled servers: ${selected_servers.length}`,
 		);
 	} catch (error) {
 		throw new Error(

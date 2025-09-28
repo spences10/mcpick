@@ -69,11 +69,3 @@ export function create_config_from_servers(
 
 	return { mcpServers: mcp_servers };
 }
-
-export function calculate_token_estimate(
-	servers: McpServer[],
-): number {
-	return servers.reduce((total, server) => {
-		return total + (server.estimated_tokens || 0);
-	}, 0);
-}

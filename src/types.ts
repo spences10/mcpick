@@ -7,7 +7,6 @@ export interface McpServer {
 	url?: string;
 	headers?: Record<string, string>;
 	description?: string;
-	estimated_tokens?: number;
 }
 
 export interface ClaudeConfig {
