@@ -1,6 +1,6 @@
 import { access, mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 export function get_claude_config_path(): string {
 	return join(homedir(), '.claude.json');
@@ -27,7 +27,7 @@ export function get_backup_filename(): string {
 	const minute = String(now.getMinutes()).padStart(2, '0');
 	const second = String(now.getSeconds()).padStart(2, '0');
 
-	return `claude-${year}-${month}-${day}-${hour}${minute}${second}.json`;
+	return `mcp-servers-${year}-${month}-${day}-${hour}${minute}${second}.json`;
 }
 
 export async function ensure_directory_exists(

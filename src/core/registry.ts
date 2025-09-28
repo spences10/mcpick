@@ -99,11 +99,11 @@ export async function list_backups(): Promise<BackupInfo[]> {
 		const backup_files = files
 			.filter(
 				(file) =>
-					file.startsWith('claude-') && file.endsWith('.json'),
+					file.startsWith('mcp-servers-') && file.endsWith('.json'),
 			)
 			.map((file) => {
 				const timestamp_match = file.match(
-					/claude-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})\.json/,
+					/mcp-servers-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})\.json/,
 				);
 				if (!timestamp_match) return null;
 
