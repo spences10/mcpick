@@ -1,7 +1,10 @@
 import { confirm, note, select } from '@clack/prompts';
-import { copyFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import {
+	read_claude_config,
+	write_claude_config,
+} from '../core/config.js';
 import { list_backups } from '../core/registry.js';
-import { get_claude_config_path } from '../utils/paths.js';
 
 export async function restore_config(): Promise<void> {
 	try {
@@ -31,17 +34,36 @@ export async function restore_config(): Promise<void> {
 
 		const should_restore = await confirm({
 			message:
-				'This will overwrite your current .claude.json file. Continue?',
+				'This will replace your current MCP servers configuration. Continue?',
 		});
 
 		if (typeof should_restore === 'symbol' || !should_restore) {
 			return;
 		}
 
-		const config_path = get_claude_config_path();
-		await copyFile(selected_backup_path as string, config_path);
+		// Read the backup file
+		const backup_content = await readFile(
+			selected_backup_path as string,
+			'utf-8',
+		);
+		const backup_data = JSON.parse(backup_content);
 
-		note('Configuration restored successfully!');
+		// Read current config and merge
+		const current_config = await read_claude_config();
+		const updated_config = {
+			...current_config,
+			mcpServers: backup_data.mcpServers || {},
+		};
+
+		// Write back only the updated config
+		await write_claude_config(updated_config);
+
+		const server_count = Object.keys(
+			backup_data.mcpServers || {},
+		).length;
+		note(
+			`MCP servers configuration restored successfully!\n(${server_count} servers restored)`,
+		);
 	} catch (error) {
 		throw new Error(
 			`Failed to restore configuration: ${
