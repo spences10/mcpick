@@ -1,8 +1,8 @@
 import * as v from 'valibot';
 
 export const mcp_server_schema = v.object({
-	name: v.string([v.minLength(1)]),
-	command: v.string([v.minLength(1)]),
+	name: v.pipe(v.string(), v.minLength(1)),
+	command: v.pipe(v.string(), v.minLength(1)),
 	args: v.array(v.string()),
 	description: v.optional(v.string()),
 	estimated_tokens: v.optional(v.number()),
@@ -13,8 +13,18 @@ export const claude_config_schema = v.object({
 		v.record(
 			v.string(),
 			v.object({
-				command: v.string([v.minLength(1)]),
+				type: v.optional(
+					v.union([
+						v.literal('stdio'),
+						v.literal('sse'),
+						v.literal('http'),
+					]),
+				),
+				command: v.pipe(v.string(), v.minLength(1)),
 				args: v.array(v.string()),
+				env: v.optional(v.record(v.string(), v.string())),
+				url: v.optional(v.string()),
+				headers: v.optional(v.record(v.string(), v.string())),
 				description: v.optional(v.string()),
 				estimated_tokens: v.optional(v.number()),
 			}),

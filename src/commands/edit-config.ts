@@ -14,10 +14,24 @@ import {
 export async function edit_config(): Promise<void> {
 	try {
 		const current_config = await read_claude_config();
-		const all_servers = await get_all_available_servers();
+
+		// If registry is empty but .claude.json has servers, populate registry from config
+		let all_servers = await get_all_available_servers();
+		if (all_servers.length === 0 && current_config.mcpServers) {
+			const current_servers = get_enabled_servers(current_config);
+			if (current_servers.length > 0) {
+				await sync_servers_to_registry(current_servers);
+				all_servers = current_servers;
+				note(
+					`Imported ${current_servers.length} servers from your .claude.json file into registry.`,
+				);
+			}
+		}
 
 		if (all_servers.length === 0) {
-			note('No MCP servers found in registry. Add servers first.');
+			note(
+				'No MCP servers found in .claude.json or registry. Add servers first.',
+			);
 			return;
 		}
 

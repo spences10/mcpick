@@ -1,7 +1,11 @@
 export interface McpServer {
 	name: string;
+	type?: 'stdio' | 'sse' | 'http';
 	command: string;
 	args: string[];
+	env?: Record<string, string>;
+	url?: string;
+	headers?: Record<string, string>;
 	description?: string;
 	estimated_tokens?: number;
 }
