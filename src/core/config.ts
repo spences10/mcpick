@@ -27,7 +27,20 @@ export async function write_claude_config(
 	config: ClaudeConfig,
 ): Promise<void> {
 	const config_path = get_claude_config_path();
-	const config_content = JSON.stringify(config, null, 2);
+
+	// Read the entire existing file to preserve all other sections
+	let existing_config: any = {};
+	try {
+		const existing_content = await readFile(config_path, 'utf-8');
+		existing_config = JSON.parse(existing_content);
+	} catch (error) {
+		// If file doesn't exist or is invalid, start with empty object
+	}
+
+	// Only update the mcpServers section, preserve everything else
+	existing_config.mcpServers = config.mcpServers;
+
+	const config_content = JSON.stringify(existing_config, null, 2);
 	await writeFile(config_path, config_content, 'utf-8');
 }
 
