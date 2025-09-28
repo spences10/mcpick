@@ -1,5 +1,0 @@
----
-'mcpick': patch
----
-
-initial release
