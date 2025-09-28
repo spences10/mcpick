@@ -4,6 +4,24 @@ A CLI tool for dynamically managing MCP server configurations in
 Claude Code. Enable and disable MCP servers on-demand to optimize
 context usage and performance.
 
+## Installation
+
+### One-time Usage
+
+```bash
+pnpm dlx mcpick
+# or
+npx mcpick
+```
+
+### Global Installation
+
+```bash
+pnpm install -g mcpick
+# or
+npm install -g mcpick
+```
+
 ## The Problem
 
 Using the Claude Code `/doctor` command you may see something like
