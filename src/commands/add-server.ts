@@ -10,17 +10,17 @@ export async function add_server(): Promise<void> {
 			message: 'How would you like to add the server?',
 			options: [
 				{
-					value: 'form',
-					label: 'Step-by-step form',
-					hint: 'Fill out fields one by one',
-				},
-				{
 					value: 'json',
 					label: 'Paste JSON configuration',
 					hint: 'Paste complete server config as JSON',
 				},
+				{
+					value: 'form',
+					label: 'Step-by-step form',
+					hint: 'Fill out fields one by one',
+				},
 			],
-			initialValue: 'form',
+			initialValue: 'json',
 		});
 
 		if (typeof config_method === 'symbol') return;
