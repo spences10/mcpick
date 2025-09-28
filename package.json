@@ -1,6 +1,6 @@
 {
 	"name": "mcpick",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Dynamic MCP server configuration manager for Claude Code",
 	"type": "module",
 	"main": "./dist/index.js",

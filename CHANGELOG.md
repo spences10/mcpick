@@ -1,5 +1,15 @@
 # mcpick
 
+## 0.0.2
+
+### Patch Changes
+
+- 6a3eec7: paste json server config
+- a62953b: Removed estimated_tokens prompt and references, Enhanced
+  add-server dialogue
+- 491d543: make json first options for adding server
+- 3242ff1: remove unused docs
+
 ## 0.0.1
 
 ### Patch Changes
