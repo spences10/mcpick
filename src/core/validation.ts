@@ -2,8 +2,18 @@ import * as v from 'valibot';
 
 export const mcp_server_schema = v.object({
 	name: v.pipe(v.string(), v.minLength(1)),
+	type: v.optional(
+		v.union([
+			v.literal('stdio'),
+			v.literal('sse'),
+			v.literal('http'),
+		]),
+	),
 	command: v.pipe(v.string(), v.minLength(1)),
 	args: v.array(v.string()),
+	env: v.optional(v.record(v.string(), v.string())),
+	url: v.optional(v.string()),
+	headers: v.optional(v.record(v.string(), v.string())),
 	description: v.optional(v.string()),
 });
 
