@@ -50,7 +50,7 @@ async function main(): Promise<void> {
 					{
 						value: 'exit' as MenuAction,
 						label: 'Exit',
-						hint: 'Quit MCPick',
+						hint: 'Quit MCPick (Esc)',
 					},
 				],
 			});
