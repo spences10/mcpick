@@ -1,4 +1,4 @@
-# MCPick
+# McPick
 
 A CLI tool for dynamically managing MCP server configurations in
 Claude Code. Enable and disable MCP servers on-demand to optimize
@@ -49,7 +49,7 @@ This can lead to:
 
 ## The Solution
 
-MCPick provides an intuitive CLI menu to:
+McPick provides an intuitive CLI menu to:
 
 - ✅ **Toggle servers on/off** - Enable only the MCP servers you need
   for your current task
@@ -67,7 +67,7 @@ MCPick provides an intuitive CLI menu to:
 ### Interactive Menu
 
 ```bash
-┌  MCPick - MCP Server Configuration Manager
+┌  McPick - MCP Server Configuration Manager
 │
 ◆  What would you like to do?
 │  ● Edit config (Toggle MCP servers on/off)
