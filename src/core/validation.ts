@@ -21,21 +21,31 @@ export const claude_config_schema = v.object({
 	mcpServers: v.optional(
 		v.record(
 			v.string(),
-			v.object({
-				type: v.optional(
-					v.union([
-						v.literal('stdio'),
-						v.literal('sse'),
-						v.literal('http'),
-					]),
-				),
-				command: v.pipe(v.string(), v.minLength(1)),
-				args: v.array(v.string()),
-				env: v.optional(v.record(v.string(), v.string())),
-				url: v.optional(v.string()),
-				headers: v.optional(v.record(v.string(), v.string())),
-				description: v.optional(v.string()),
-			}),
+			v.union([
+				v.object({
+					type: v.optional(
+						v.union([
+							v.literal('stdio'),
+						]),
+					),
+					command: v.pipe(v.string(), v.minLength(1)),
+					args: v.array(v.string()),
+					env: v.optional(v.record(v.string(), v.string())),
+					description: v.optional(v.string()),
+				}),
+				v.object({
+					type: v.optional(
+						v.union([
+							v.literal('sse'),
+							v.literal('http'),
+						]),
+					),
+					env: v.optional(v.record(v.string(), v.string())),
+					url: v.string(),
+					headers: v.optional(v.record(v.string(), v.string())),
+					description: v.optional(v.string()),
+				}),
+			])
 		),
 	),
 });
