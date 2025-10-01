@@ -19,13 +19,13 @@ importers:
         specifier: ^2.29.7
         version: 2.29.7(@types/node@24.6.1)
       '@types/node':
-        specifier: ^24.5.2
+        specifier: ^24.6.1
         version: 24.6.1
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
       typescript:
-        specifier: ^5.9.2
+        specifier: ^5.9.3
         version: 5.9.3
 
 packages:
