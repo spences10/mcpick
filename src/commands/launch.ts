@@ -8,7 +8,7 @@ export async function launch_claude_code(): Promise<void> {
 		s.start('Launching Claude Code...');
 
 		const claude_process = spawn('claude', ['code'], {
-			stdio: 'inherit',
+			stdio: 'ignore',
 			detached: true,
 		});
 
