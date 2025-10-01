@@ -343,7 +343,7 @@ async function add_server_from_json(): Promise<void> {
 			return;
 		}
 
-		await add_server_to_registry(validated_server);
+		await add_server_to_registry(validated_server as McpServer);
 
 		note(
 			`Server "${validated_server.name}" added to registry successfully!`,
