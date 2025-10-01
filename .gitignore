@@ -4,4 +4,3 @@ dist/
 .git/
 .DS_Store
 *.tgz
-package-lock.json
