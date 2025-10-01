@@ -17,10 +17,10 @@ importers:
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.7
-        version: 2.29.7(@types/node@24.6.0)
+        version: 2.29.7(@types/node@24.6.1)
       '@types/node':
         specifier: ^24.5.2
-        version: 24.6.0
+        version: 24.6.1
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -125,8 +125,8 @@ packages:
   '@types/node@12.20.55':
     resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
 
-  '@types/node@24.6.0':
-    resolution: {integrity: sha512-F1CBxgqwOMc4GKJ7eY22hWhBVQuMYTtqI8L0FcszYcpYX0fzfDGpez22Xau8Mgm7O9fI+zA/TYIdq3tGWfweBA==}
+  '@types/node@24.6.1':
+    resolution: {integrity: sha512-ljvjjs3DNXummeIaooB4cLBKg2U6SPI6Hjra/9rRIy7CpM0HpLtG9HptkMKAb4HYWy5S7HUvJEuWgr/y0U8SHw==}
 
   ansi-colors@4.1.3:
     resolution: {integrity: sha512-/6w/C21Pm1A7aZitlI5Ni/2J6FFQN8i1Cvz3kHABAAbw93v/NlvKdVOqz7CCWz/3iv/JplRSEEZ83XION15ovw==}
@@ -464,7 +464,7 @@ snapshots:
     dependencies:
       '@changesets/types': 6.1.0
 
-  '@changesets/cli@2.29.7(@types/node@24.6.0)':
+  '@changesets/cli@2.29.7(@types/node@24.6.1)':
     dependencies:
       '@changesets/apply-release-plan': 7.0.13
       '@changesets/assemble-release-plan': 6.0.9
@@ -480,7 +480,7 @@ snapshots:
       '@changesets/should-skip-package': 0.1.2
       '@changesets/types': 6.1.0
       '@changesets/write': 0.4.0
-      '@inquirer/external-editor': 1.0.2(@types/node@24.6.0)
+      '@inquirer/external-editor': 1.0.2(@types/node@24.6.1)
       '@manypkg/get-packages': 1.1.3
       ansi-colors: 4.1.3
       ci-info: 3.9.0
@@ -590,12 +590,12 @@ snapshots:
       picocolors: 1.1.1
       sisteransi: 1.0.5
 
-  '@inquirer/external-editor@1.0.2(@types/node@24.6.0)':
+  '@inquirer/external-editor@1.0.2(@types/node@24.6.1)':
     dependencies:
       chardet: 2.1.0
       iconv-lite: 0.7.0
     optionalDependencies:
-      '@types/node': 24.6.0
+      '@types/node': 24.6.1
 
   '@manypkg/find-root@1.1.0':
     dependencies:
@@ -627,7 +627,7 @@ snapshots:
 
   '@types/node@12.20.55': {}
 
-  '@types/node@24.6.0':
+  '@types/node@24.6.1':
     dependencies:
       undici-types: 7.13.0
 
