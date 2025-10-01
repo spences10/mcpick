@@ -1,10 +1,11 @@
 import { access, readFile, writeFile } from 'node:fs/promises';
-import { ClaudeConfig, McpServer } from '../types.js';
+import { ClaudeConfig, McpServer, McpServerBase } from '../types.js';
 import { get_claude_config_path } from '../utils/paths.js';
 import { validate_claude_config } from './validation.js';
 
 export async function read_claude_config(): Promise<ClaudeConfig> {
 	const config_path = get_claude_config_path();
+
 
 	try {
 		await access(config_path);
@@ -60,7 +61,7 @@ export function get_enabled_servers(
 export function create_config_from_servers(
 	selected_servers: McpServer[],
 ): ClaudeConfig {
-	const mcp_servers: { [key: string]: Omit<McpServer, 'name'> } = {};
+	const mcp_servers: { [key: string]: McpServerBase } = {};
 
 	selected_servers.forEach((server) => {
 		const { name, ...server_config } = server;

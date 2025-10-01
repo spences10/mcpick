@@ -1,51 +1,47 @@
 import * as v from 'valibot';
 
-export const mcp_server_schema = v.object({
-	name: v.pipe(v.string(), v.minLength(1)),
-	type: v.optional(
-		v.union([
-			v.literal('stdio'),
-			v.literal('sse'),
-			v.literal('http'),
-		]),
-	),
+export const mcp_server_schema_stdio = v.object({
+	type: v.optional(v.literal('stdio')),
 	command: v.pipe(v.string(), v.minLength(1)),
-	args: v.array(v.string()),
+	args: v.optional(v.array(v.string())),
 	env: v.optional(v.record(v.string(), v.string())),
-	url: v.optional(v.string()),
+	description: v.optional(v.string()),
+});
+
+export const mcp_server_schema_sse = v.object({
+	type: v.literal('sse'),
+	env: v.optional(v.record(v.string(), v.string())),
+	url: v.pipe(v.string(), v.minLength(1)),
 	headers: v.optional(v.record(v.string(), v.string())),
 	description: v.optional(v.string()),
 });
+
+export const mcp_server_schema_http = v.object({
+	type: v.literal('http'),
+	env: v.optional(v.record(v.string(), v.string())),
+	url: v.pipe(v.string(), v.minLength(1)),
+	headers: v.optional(v.record(v.string(), v.string())),
+	description: v.optional(v.string()),
+});
+
+export const mcp_server_schema_base = v.union([
+	mcp_server_schema_stdio,
+	mcp_server_schema_sse,
+	mcp_server_schema_http,
+]);
+  
+  export const mcp_server_schema = v.intersect([
+	v.object({
+	  name: v.pipe(v.string(), v.minLength(1)),
+	}),
+	mcp_server_schema_base,
+  ]);
 
 export const claude_config_schema = v.object({
 	mcpServers: v.optional(
 		v.record(
 			v.string(),
-			v.union([
-				v.object({
-					type: v.optional(
-						v.union([
-							v.literal('stdio'),
-						]),
-					),
-					command: v.pipe(v.string(), v.minLength(1)),
-					args: v.array(v.string()),
-					env: v.optional(v.record(v.string(), v.string())),
-					description: v.optional(v.string()),
-				}),
-				v.object({
-					type: v.optional(
-						v.union([
-							v.literal('sse'),
-							v.literal('http'),
-						]),
-					),
-					env: v.optional(v.record(v.string(), v.string())),
-					url: v.string(),
-					headers: v.optional(v.record(v.string(), v.string())),
-					description: v.optional(v.string()),
-				}),
-			])
+			mcp_server_schema_base
 		),
 	),
 });
