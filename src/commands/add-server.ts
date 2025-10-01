@@ -84,8 +84,9 @@ export async function add_server(): Promise<void> {
 
 		if (typeof configure_advanced === 'symbol') return;
 
-		let server_data: Partial<McpServer> = {
+		let server_data: any = {
 			name: name.trim(),
+			type: 'stdio',
 			command: command.trim(),
 			args,
 			...(description &&
@@ -110,12 +111,14 @@ export async function add_server(): Promise<void> {
 
 			if (typeof transport_type === 'symbol') return;
 
-			if (transport_type !== 'stdio') {
-				server_data.type = transport_type as 'sse' | 'http';
-			}
+			server_data.type = transport_type;
 
 			// URL for non-stdio transports
-			if (transport_type !== 'stdio') {
+			if (transport_type === 'sse' || transport_type === 'http') {
+				// Remove stdio-specific fields
+				delete server_data.command;
+				delete server_data.args;
+
 				const url = await text({
 					message: 'Server URL:',
 					placeholder: 'e.g., http://localhost:3000',
@@ -180,14 +183,39 @@ export async function add_server(): Promise<void> {
 
 		const validated_server = validate_mcp_server(server_data);
 
-		note(
-			`Server to add:\n` +
-				`Name: ${validated_server.name}\n` +
-				`Command: ${
-					validated_server.command
-				} ${validated_server.args.join(' ')}\n` +
-				`Description: ${validated_server.description || 'None'}`,
+		const details: string[] = [`Name: ${validated_server.name}`];
+
+		if ('command' in validated_server) {
+			details.push(
+				`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
+			);
+		}
+
+		if ('url' in validated_server) {
+			details.push(`URL: ${validated_server.url}`);
+		}
+
+		details.push(
+			`Description: ${validated_server.description || 'None'}`,
 		);
+
+		if (validated_server.type) {
+			details.push(`Transport: ${validated_server.type}`);
+		}
+
+		if (validated_server.env) {
+			details.push(
+				`Environment: ${Object.keys(validated_server.env).length} variables`,
+			);
+		}
+
+		if ('headers' in validated_server && validated_server.headers) {
+			details.push(
+				`Headers: ${Object.keys(validated_server.headers).length} headers`,
+			);
+		}
+
+		note(`Server to add:\n${details.join('\n')}`);
 
 		const should_add = await confirm({
 			message: 'Add this server to the registry?',
@@ -259,28 +287,53 @@ async function add_server_from_json(): Promise<void> {
 
 		const server_data = parsed;
 
+		// Normalize the data to match schema expectations
+		if (!server_data.type && server_data.command) {
+			server_data.type = 'stdio';
+		}
+		if (server_data.type !== 'stdio') {
+			delete server_data.command;
+			delete server_data.args;
+		}
+		if (server_data.command && !server_data.args) {
+			server_data.args = [];
+		}
+
 		const validated_server = validate_mcp_server(server_data);
 
-		note(
-			`Server to add:\n` +
-				`Name: ${validated_server.name}\n` +
-				`Command: ${
-					validated_server.command
-				} ${validated_server.args.join(' ')}\n` +
-				`Description: ${validated_server.description || 'None'}` +
-				(validated_server.type
-					? `\nTransport: ${validated_server.type}`
-					: '') +
-				(validated_server.url
-					? `\nURL: ${validated_server.url}`
-					: '') +
-				(validated_server.env
-					? `\nEnvironment: ${Object.keys(validated_server.env).length} variables`
-					: '') +
-				(validated_server.headers
-					? `\nHeaders: ${Object.keys(validated_server.headers).length} headers`
-					: ''),
+		const details: string[] = [`Name: ${validated_server.name}`];
+
+		if ('command' in validated_server) {
+			details.push(
+				`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
+			);
+		}
+
+		if ('url' in validated_server) {
+			details.push(`URL: ${validated_server.url}`);
+		}
+
+		details.push(
+			`Description: ${validated_server.description || 'None'}`,
 		);
+
+		if (validated_server.type) {
+			details.push(`Transport: ${validated_server.type}`);
+		}
+
+		if (validated_server.env) {
+			details.push(
+				`Environment: ${Object.keys(validated_server.env).length} variables`,
+			);
+		}
+
+		if ('headers' in validated_server && validated_server.headers) {
+			details.push(
+				`Headers: ${Object.keys(validated_server.headers).length} headers`,
+			);
+		}
+
+		note(`Server to add:\n${details.join('\n')}`);
 
 		const should_add = await confirm({
 			message: 'Add this server to the registry?',
