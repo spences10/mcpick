@@ -3,6 +3,40 @@ import { add_server_to_registry } from '../core/registry.js';
 import { validate_mcp_server } from '../core/validation.js';
 import { McpServer } from '../types.js';
 
+function format_server_details(server: McpServer): string[] {
+	const details: string[] = [`Name: ${server.name}`];
+
+	if ('command' in server) {
+		details.push(
+			`Command: ${server.command} ${(server.args || []).join(' ')}`,
+		);
+	}
+
+	if ('url' in server) {
+		details.push(`URL: ${server.url}`);
+	}
+
+	details.push(`Description: ${server.description || 'None'}`);
+
+	if (server.type) {
+		details.push(`Transport: ${server.type}`);
+	}
+
+	if (server.env) {
+		details.push(
+			`Environment: ${Object.keys(server.env).length} variables`,
+		);
+	}
+
+	if ('headers' in server && server.headers) {
+		details.push(
+			`Headers: ${Object.keys(server.headers).length} headers`,
+		);
+	}
+
+	return details;
+}
+
 export async function add_server(): Promise<void> {
 	try {
 		// First, ask how they want to configure the server
@@ -183,37 +217,9 @@ export async function add_server(): Promise<void> {
 
 		const validated_server = validate_mcp_server(server_data);
 
-		const details: string[] = [`Name: ${validated_server.name}`];
-
-		if ('command' in validated_server) {
-			details.push(
-				`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
-			);
-		}
-
-		if ('url' in validated_server) {
-			details.push(`URL: ${validated_server.url}`);
-		}
-
-		details.push(
-			`Description: ${validated_server.description || 'None'}`,
+		const details = format_server_details(
+			validated_server as McpServer,
 		);
-
-		if (validated_server.type) {
-			details.push(`Transport: ${validated_server.type}`);
-		}
-
-		if (validated_server.env) {
-			details.push(
-				`Environment: ${Object.keys(validated_server.env).length} variables`,
-			);
-		}
-
-		if ('headers' in validated_server && validated_server.headers) {
-			details.push(
-				`Headers: ${Object.keys(validated_server.headers).length} headers`,
-			);
-		}
 
 		note(`Server to add:\n${details.join('\n')}`);
 
@@ -301,37 +307,9 @@ async function add_server_from_json(): Promise<void> {
 
 		const validated_server = validate_mcp_server(server_data);
 
-		const details: string[] = [`Name: ${validated_server.name}`];
-
-		if ('command' in validated_server) {
-			details.push(
-				`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
-			);
-		}
-
-		if ('url' in validated_server) {
-			details.push(`URL: ${validated_server.url}`);
-		}
-
-		details.push(
-			`Description: ${validated_server.description || 'None'}`,
+		const details = format_server_details(
+			validated_server as McpServer,
 		);
-
-		if (validated_server.type) {
-			details.push(`Transport: ${validated_server.type}`);
-		}
-
-		if (validated_server.env) {
-			details.push(
-				`Environment: ${Object.keys(validated_server.env).length} variables`,
-			);
-		}
-
-		if ('headers' in validated_server && validated_server.headers) {
-			details.push(
-				`Headers: ${Object.keys(validated_server.headers).length} headers`,
-			);
-		}
 
 		note(`Server to add:\n${details.join('\n')}`);
 
