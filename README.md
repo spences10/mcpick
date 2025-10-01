@@ -152,6 +152,23 @@ MCPick works with the standard Claude Code configuration format:
 - **Error handling**: Graceful failure modes with helpful error
   messages
 
+## Future Features
+
+McPick is actively being developed with new features planned. See the
+[roadmap](./docs/ROADMAP.md) for details on:
+
+- **Settings Validation** - Validate your Claude Code settings files
+  using the
+  [claude-code-settings-schema](https://github.com/spences10/claude-code-settings-schema)
+- **Permissions Management** - Interactive tool permission
+  configuration with presets (Safe Mode, Dev Mode, Review Mode)
+- **Configuration Profiles** - Save and switch between complete
+  configuration snapshots for different workflows
+
+Have ideas for other features?
+[Open an issue](https://github.com/spences10/mcpick/issues) or check
+out the [contribution guide](./docs/ROADMAP.md)!
+
 ## Requirements
 
 - Node.js 22+
