@@ -10,7 +10,6 @@ import {
 import { add_server } from './commands/add-server.js';
 import { backup_config } from './commands/backup.js';
 import { edit_config } from './commands/edit-config.js';
-import { launch_claude_code } from './commands/launch.js';
 import { restore_config } from './commands/restore.js';
 import { MenuAction } from './types.js';
 
@@ -43,11 +42,6 @@ async function main(): Promise<void> {
 						hint: 'Restore from a previous backup',
 					},
 					{
-						value: 'launch' as MenuAction,
-						label: 'Launch Claude Code',
-						hint: 'Start Claude Code with current config',
-					},
-					{
 						value: 'exit' as MenuAction,
 						label: 'Exit',
 						hint: 'Quit MCPick (Esc)',
@@ -72,9 +66,6 @@ async function main(): Promise<void> {
 					break;
 				case 'restore':
 					await restore_config();
-					break;
-				case 'launch':
-					await launch_claude_code();
 					break;
 				case 'exit':
 					outro('Goodbye!');

@@ -30,5 +30,4 @@ export type MenuAction =
 	| 'backup'
 	| 'add-server'
 	| 'restore'
-	| 'launch'
 	| 'exit';

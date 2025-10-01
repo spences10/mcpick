@@ -59,8 +59,6 @@ McPick provides an intuitive CLI menu to:
   preserving other Claude Code settings
 - 💾 **Backup & restore** - Create focused backups of your MCP server
   configurations
-- 🚀 **Quick launch** - Start Claude Code with your optimized
-  configuration
 
 ## Features
 
@@ -74,7 +72,6 @@ McPick provides an intuitive CLI menu to:
 │  ○ Backup config
 │  ○ Add MCP server
 │  ○ Restore from backup
-│  ○ Launch Claude Code
 │  ○ Exit
 └
 ```
@@ -103,7 +100,8 @@ McPick provides an intuitive CLI menu to:
 
 1. **Before a coding session**: Run MCPick and enable only relevant
    servers (e.g., just database tools for DB work)
-2. **Launch Claude Code**: Use MCPick's "Launch Claude Code" option
+2. **Launch Claude Code**: Run `claude` to start with your configured
+   servers
 3. **Switch contexts**: Re-run MCPick to enable different servers for
    different tasks
 
