@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.3
+
+### Patch Changes
+
+- 158520e: fix: extract duplicated server details display logic into
+  reusable function
+
 ## 0.0.2
 
 ### Patch Changes
