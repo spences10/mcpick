@@ -29,20 +29,17 @@ export const mcp_server_schema_base = v.union([
 	mcp_server_schema_sse,
 	mcp_server_schema_http,
 ]);
-  
-  export const mcp_server_schema = v.intersect([
+
+export const mcp_server_schema = v.intersect([
 	v.object({
-	  name: v.pipe(v.string(), v.minLength(1)),
+		name: v.pipe(v.string(), v.minLength(1)),
 	}),
 	mcp_server_schema_base,
-  ]);
+]);
 
 export const claude_config_schema = v.object({
 	mcpServers: v.optional(
-		v.record(
-			v.string(),
-			mcp_server_schema_base
-		),
+		v.record(v.string(), mcp_server_schema_base),
 	),
 });
 

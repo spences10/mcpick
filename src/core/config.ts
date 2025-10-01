@@ -6,7 +6,6 @@ import { validate_claude_config } from './validation.js';
 export async function read_claude_config(): Promise<ClaudeConfig> {
 	const config_path = get_claude_config_path();
 
-
 	try {
 		await access(config_path);
 		const config_content = await readFile(config_path, 'utf-8');

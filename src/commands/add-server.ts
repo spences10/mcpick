@@ -84,150 +84,152 @@ export async function add_server(): Promise<void> {
 
 		if (typeof configure_advanced === 'symbol') return;
 
-	let server_data: any = {
-		name: name.trim(),
-		type: 'stdio',
-		command: command.trim(),
-		args,
-		...(description &&
-			description.trim() && { description: description.trim() }),
-	};
+		let server_data: any = {
+			name: name.trim(),
+			type: 'stdio',
+			command: command.trim(),
+			args,
+			...(description &&
+				description.trim() && { description: description.trim() }),
+		};
 
-	if (configure_advanced) {
-		// Transport type
-		const transport_type = await select({
-			message: 'Transport type:',
-			options: [
-				{
-					value: 'stdio',
-					label: 'stdio (default)',
-					hint: 'Standard input/output',
-				},
-				{ value: 'sse', label: 'sse', hint: 'Server-sent events' },
-				{ value: 'http', label: 'http', hint: 'HTTP transport' },
-			],
-			initialValue: 'stdio',
-		});
- 
-		if (typeof transport_type === 'symbol') return;
-
-		server_data.type = transport_type;
-
-		// URL for non-stdio transports
-		if (transport_type === 'sse' || transport_type === 'http') {
-			// Remove stdio-specific fields
-			delete server_data.command;
-			delete server_data.args;
-
-			const url = await text({
-				message: 'Server URL:',
-				placeholder: 'e.g., http://localhost:3000',
-				validate: (value) => {
-					if (!value || value.trim().length === 0) {
-						return 'URL is required for non-stdio transport';
-					}
-					return undefined;
-				},
+		if (configure_advanced) {
+			// Transport type
+			const transport_type = await select({
+				message: 'Transport type:',
+				options: [
+					{
+						value: 'stdio',
+						label: 'stdio (default)',
+						hint: 'Standard input/output',
+					},
+					{ value: 'sse', label: 'sse', hint: 'Server-sent events' },
+					{ value: 'http', label: 'http', hint: 'HTTP transport' },
+				],
+				initialValue: 'stdio',
 			});
 
-			if (typeof url === 'symbol') return;
-			server_data.url = url.trim();
-		}
+			if (typeof transport_type === 'symbol') return;
 
-		// Environment variables
-		const env_input = await text({
-			message:
-				'Environment variables (KEY=value, comma-separated):',
-			placeholder: 'e.g., API_KEY=abc123, TIMEOUT=30',
-		});
+			server_data.type = transport_type;
 
-		if (typeof env_input === 'symbol') return;
+			// URL for non-stdio transports
+			if (transport_type === 'sse' || transport_type === 'http') {
+				// Remove stdio-specific fields
+				delete server_data.command;
+				delete server_data.args;
 
-		if (env_input && env_input.trim()) {
-			const env: Record<string, string> = {};
-			env_input.split(',').forEach((pair) => {
-				const [key, ...valueParts] = pair.split('=');
-				if (key && valueParts.length > 0) {
-					env[key.trim()] = valueParts.join('=').trim();
-				}
-			});
-			if (Object.keys(env).length > 0) {
-				server_data.env = env;
+				const url = await text({
+					message: 'Server URL:',
+					placeholder: 'e.g., http://localhost:3000',
+					validate: (value) => {
+						if (!value || value.trim().length === 0) {
+							return 'URL is required for non-stdio transport';
+						}
+						return undefined;
+					},
+				});
+
+				if (typeof url === 'symbol') return;
+				server_data.url = url.trim();
 			}
-		}
 
-		// Headers for HTTP transport
-		if (transport_type === 'http') {
-			const headers_input = await text({
-				message: 'HTTP headers (KEY=value, comma-separated):',
-				placeholder:
-					'e.g., Authorization=Bearer token, Content-Type=application/json',
+			// Environment variables
+			const env_input = await text({
+				message:
+					'Environment variables (KEY=value, comma-separated):',
+				placeholder: 'e.g., API_KEY=abc123, TIMEOUT=30',
 			});
 
-			if (typeof headers_input === 'symbol') return;
+			if (typeof env_input === 'symbol') return;
 
-			if (headers_input && headers_input.trim()) {
-				const headers: Record<string, string> = {};
-				headers_input.split(',').forEach((pair) => {
+			if (env_input && env_input.trim()) {
+				const env: Record<string, string> = {};
+				env_input.split(',').forEach((pair) => {
 					const [key, ...valueParts] = pair.split('=');
 					if (key && valueParts.length > 0) {
-						headers[key.trim()] = valueParts.join('=').trim();
+						env[key.trim()] = valueParts.join('=').trim();
 					}
 				});
-				if (Object.keys(headers).length > 0) {
-					server_data.headers = headers;
+				if (Object.keys(env).length > 0) {
+					server_data.env = env;
+				}
+			}
+
+			// Headers for HTTP transport
+			if (transport_type === 'http') {
+				const headers_input = await text({
+					message: 'HTTP headers (KEY=value, comma-separated):',
+					placeholder:
+						'e.g., Authorization=Bearer token, Content-Type=application/json',
+				});
+
+				if (typeof headers_input === 'symbol') return;
+
+				if (headers_input && headers_input.trim()) {
+					const headers: Record<string, string> = {};
+					headers_input.split(',').forEach((pair) => {
+						const [key, ...valueParts] = pair.split('=');
+						if (key && valueParts.length > 0) {
+							headers[key.trim()] = valueParts.join('=').trim();
+						}
+					});
+					if (Object.keys(headers).length > 0) {
+						server_data.headers = headers;
+					}
 				}
 			}
 		}
-	}
 
-	const validated_server = validate_mcp_server(server_data);
+		const validated_server = validate_mcp_server(server_data);
 
-	const details: string[] = [`Name: ${validated_server.name}`];
+		const details: string[] = [`Name: ${validated_server.name}`];
 
-	if ('command' in validated_server) {
+		if ('command' in validated_server) {
+			details.push(
+				`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
+			);
+		}
+
+		if ('url' in validated_server) {
+			details.push(`URL: ${validated_server.url}`);
+		}
+
 		details.push(
-			`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
+			`Description: ${validated_server.description || 'None'}`,
 		);
-	}
 
-	if ('url' in validated_server) {
-		details.push(`URL: ${validated_server.url}`);
-	}
+		if (validated_server.type) {
+			details.push(`Transport: ${validated_server.type}`);
+		}
 
-	details.push(`Description: ${validated_server.description || 'None'}`);
+		if (validated_server.env) {
+			details.push(
+				`Environment: ${Object.keys(validated_server.env).length} variables`,
+			);
+		}
 
-	if (validated_server.type) {
-		details.push(`Transport: ${validated_server.type}`);
-	}
+		if ('headers' in validated_server && validated_server.headers) {
+			details.push(
+				`Headers: ${Object.keys(validated_server.headers).length} headers`,
+			);
+		}
 
-	if (validated_server.env) {
-		details.push(
-			`Environment: ${Object.keys(validated_server.env).length} variables`,
+		note(`Server to add:\n${details.join('\n')}`);
+
+		const should_add = await confirm({
+			message: 'Add this server to the registry?',
+		});
+
+		if (typeof should_add === 'symbol' || !should_add) {
+			return;
+		}
+
+		await add_server_to_registry(validated_server);
+
+		note(
+			`Server "${validated_server.name}" added to registry successfully!`,
 		);
-	}
-
-	if ('headers' in validated_server && validated_server.headers) {
-		details.push(
-			`Headers: ${Object.keys(validated_server.headers).length} headers`,
-		);
-	}
-
-	note(`Server to add:\n${details.join('\n')}`);
-
-	const should_add = await confirm({
-		message: 'Add this server to the registry?',
-	});
-
-	if (typeof should_add === 'symbol' || !should_add) {
-		return;
-	}
-
-	await add_server_to_registry(validated_server);
-
-	note(
-		`Server "${validated_server.name}" added to registry successfully!`,
-	);
 	} catch (error) {
 		throw new Error(
 			`Failed to add server: ${
@@ -281,69 +283,71 @@ async function add_server_from_json(): Promise<void> {
 			jsonString = `{${jsonString}}`;
 		}
 
-	const parsed = JSON.parse(jsonString);
+		const parsed = JSON.parse(jsonString);
 
-	const server_data = parsed;
+		const server_data = parsed;
 
-	// Normalize the data to match schema expectations
-	if (!server_data.type && server_data.command) {
-		server_data.type = 'stdio';
-	}
-	if (server_data.type !== 'stdio') {
-		delete server_data.command;
-		delete server_data.args;
-	}
-	if (server_data.command && !server_data.args) {
-		server_data.args = [];
-	}
+		// Normalize the data to match schema expectations
+		if (!server_data.type && server_data.command) {
+			server_data.type = 'stdio';
+		}
+		if (server_data.type !== 'stdio') {
+			delete server_data.command;
+			delete server_data.args;
+		}
+		if (server_data.command && !server_data.args) {
+			server_data.args = [];
+		}
 
-	const validated_server = validate_mcp_server(server_data);
+		const validated_server = validate_mcp_server(server_data);
 
-	const details: string[] = [`Name: ${validated_server.name}`];
+		const details: string[] = [`Name: ${validated_server.name}`];
 
-	if ('command' in validated_server) {
+		if ('command' in validated_server) {
+			details.push(
+				`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
+			);
+		}
+
+		if ('url' in validated_server) {
+			details.push(`URL: ${validated_server.url}`);
+		}
+
 		details.push(
-			`Command: ${validated_server.command} ${(validated_server.args || []).join(' ')}`,
+			`Description: ${validated_server.description || 'None'}`,
 		);
-	}
 
-	if ('url' in validated_server) {
-		details.push(`URL: ${validated_server.url}`);
-	}
+		if (validated_server.type) {
+			details.push(`Transport: ${validated_server.type}`);
+		}
 
-	details.push(`Description: ${validated_server.description || 'None'}`);
+		if (validated_server.env) {
+			details.push(
+				`Environment: ${Object.keys(validated_server.env).length} variables`,
+			);
+		}
 
-	if (validated_server.type) {
-		details.push(`Transport: ${validated_server.type}`);
-	}
+		if ('headers' in validated_server && validated_server.headers) {
+			details.push(
+				`Headers: ${Object.keys(validated_server.headers).length} headers`,
+			);
+		}
 
-	if (validated_server.env) {
-		details.push(
-			`Environment: ${Object.keys(validated_server.env).length} variables`,
+		note(`Server to add:\n${details.join('\n')}`);
+
+		const should_add = await confirm({
+			message: 'Add this server to the registry?',
+		});
+
+		if (typeof should_add === 'symbol' || !should_add) {
+			return;
+		}
+
+		await add_server_to_registry(validated_server);
+
+		note(
+			`Server "${validated_server.name}" added to registry successfully!`,
 		);
-	}
-
-	if ('headers' in validated_server && validated_server.headers) {
-		details.push(
-			`Headers: ${Object.keys(validated_server.headers).length} headers`,
-		);
-	}
-
-	note(`Server to add:\n${details.join('\n')}`);
-
-	const should_add = await confirm({
-		message: 'Add this server to the registry?',
-	});
-
-	if (typeof should_add === 'symbol' || !should_add) {
-		return;
-	}
-
-	await add_server_to_registry(validated_server);
-
-	note(
-		`Server "${validated_server.name}" added to registry successfully!`,
-	);
 	} catch (error) {
 		throw new Error(
 			`Failed to parse or validate JSON: ${
