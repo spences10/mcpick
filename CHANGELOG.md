@@ -1,5 +1,11 @@
 # mcpick
 
+## 0.0.4
+
+### Patch Changes
+
+- 25f7d07: chore: remove non-functional launch feature
+
 ## 0.0.3
 
 ### Patch Changes
