@@ -6,9 +6,11 @@ context usage and performance.
 
 ## Installation
 
-### One-time Usage
+### One-time Usage (recommended) 
 
 ```bash
+pnpx mcpick
+# or
 pnpm dlx mcpick
 # or
 npx mcpick
