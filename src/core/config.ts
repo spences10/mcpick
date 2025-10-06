@@ -37,18 +37,8 @@ export async function write_claude_config(
 		// If file doesn't exist or is invalid, start with empty object
 	}
 
-	// Only update the mcpServers section at the root level, preserve everything else
+	// Only update the mcpServers section, preserve everything else
 	existing_config.mcpServers = config.mcpServers;
-
-	// Remove project-level mcpServers as they are not part of the feature set
-	// and should not be used. Only root-level mcpServers should be configured.
-	if (existing_config.projects) {
-		for (const projectPath in existing_config.projects) {
-			if (existing_config.projects[projectPath].mcpServers) {
-				delete existing_config.projects[projectPath].mcpServers;
-			}
-		}
-	}
 
 	const config_content = JSON.stringify(existing_config, null, 2);
 	await writeFile(config_path, config_content, 'utf-8');
