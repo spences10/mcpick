@@ -23,7 +23,7 @@ async function main(): Promise<void> {
 				options: [
 					{
 						value: 'edit-config' as MenuAction,
-						label: 'Edit config',
+						label: 'Enable / Disable MCP servers',
 						hint: 'Toggle MCP servers on/off',
 					},
 					{

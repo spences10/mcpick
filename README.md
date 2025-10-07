@@ -6,7 +6,7 @@ context usage and performance.
 
 ## Installation
 
-### One-time Usage (recommended) 
+### One-time Usage (recommended)
 
 ```bash
 pnpx mcpick
@@ -142,6 +142,11 @@ MCPick works with the standard Claude Code configuration format:
 - **MCPick Registry**: `~/.claude/mcpick/servers.json` (MCPick's
   server database)
 - **Backups**: `~/.claude/mcpick/backups/` (MCP configuration backups)
+
+> **Note**: If your MCP servers do not appear in MCPick, ensure they
+> are configured at the global level in Claude Code
+> (`~/.claude.json`), not at the project level (`.claude.json` in your
+> project directory). MCPick manages the global configuration file.
 
 ## Safety Features
 

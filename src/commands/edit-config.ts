@@ -45,7 +45,8 @@ export async function edit_config(): Promise<void> {
 		}));
 
 		const selected_server_names = await multiselect({
-			message: 'Select MCP servers to enable:',
+			message:
+				'Select MCP servers to enable (Toggle On/Off servers with spacebar):',
 			options: server_choices,
 			initialValues: currently_enabled,
 			required: false,
