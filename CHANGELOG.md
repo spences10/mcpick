@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.5
+
+### Patch Changes
+
+- abc8715: fix: improve UI labels and add documentation about global
+  MCP server configuration
+
 ## 0.0.4
 
 ### Patch Changes
