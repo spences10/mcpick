@@ -1,13 +1,43 @@
 import { access, mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+
+type BaseDir = string;
+type ParentDir = string;
+type CoLocatedConfig = boolean;
+
+export function get_base_dir(): {
+	baseDir: BaseDir;
+	parentDir: ParentDir;
+	coLocatedConfig: CoLocatedConfig;
+} {
+	const configDir = process.env.CLAUDE_CONFIG_DIR;
+	if (configDir && configDir.length > 0 && existsSync(configDir)) {
+		return {
+			baseDir: configDir,
+			parentDir: dirname(configDir),
+			coLocatedConfig: true,
+		};
+	}
+	const defaultDir = join(homedir(), '.claude');
+	return {
+		baseDir: defaultDir,
+		parentDir: dirname(defaultDir),
+		coLocatedConfig: false,
+	};
+}
 
 export function get_claude_config_path(): string {
-	return join(homedir(), '.claude.json');
+	const { baseDir, parentDir, coLocatedConfig } = get_base_dir();
+	if (coLocatedConfig) {
+		return join(baseDir, '.claude.json');
+	}
+	return join(parentDir, '.claude.json');
 }
 
 export function get_mcpick_dir(): string {
-	return join(homedir(), '.claude', 'mcpick');
+	return join(get_base_dir().baseDir, 'mcpick');
 }
 
 export function get_server_registry_path(): string {
