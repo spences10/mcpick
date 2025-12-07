@@ -1,5 +1,11 @@
 # mcpick
 
+## 0.0.7
+
+### Patch Changes
+
+- fb70e88: add profiles feature
+
 ## 0.0.6
 
 ### Patch Changes
