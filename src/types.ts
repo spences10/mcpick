@@ -30,4 +30,6 @@ export type MenuAction =
 	| 'backup'
 	| 'add-server'
 	| 'restore'
+	| 'load-profile'
+	| 'save-profile'
 	| 'exit';

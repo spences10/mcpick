@@ -74,6 +74,8 @@ McPick provides an intuitive CLI menu to:
 │  ○ Backup config
 │  ○ Add MCP server
 │  ○ Restore from backup
+│  ○ Load profile
+│  ○ Save profile
 │  ○ Exit
 └
 ```
@@ -98,14 +100,56 @@ McPick provides an intuitive CLI menu to:
 - **Easy restoration**: Restore from any previous backup with a simple
   menu
 
+### Profiles
+
+Load predefined sets of MCP servers instantly:
+
+```bash
+# Apply a profile
+mcpick --profile database
+mcpick -p database
+
+# Save current config as a profile
+mcpick --save-profile mysetup
+mcpick -s mysetup
+
+# List available profiles
+mcpick --list-profiles
+mcpick -l
+```
+
+Profiles are stored in `~/.claude/mcpick/profiles/`. You can also
+create them manually:
+
+```json
+// ~/.claude/mcpick/profiles/database.json
+{
+	"mcp-sqlite-tools": {
+		"type": "stdio",
+		"command": "npx",
+		"args": ["-y", "mcp-sqlite-tools"]
+	}
+}
+```
+
+Or use full format with `mcpServers` wrapper:
+
+```json
+{
+  "mcpServers": {
+    "server-name": { ... }
+  }
+}
+```
+
 ### Typical Workflow
 
-1. **Before a coding session**: Run MCPick and enable only relevant
-   servers (e.g., just database tools for DB work)
+1. **Before a coding session**: Run `mcpick -p <profile>` or use the
+   interactive menu to enable relevant servers
 2. **Launch Claude Code**: Run `claude` to start with your configured
    servers
-3. **Switch contexts**: Re-run MCPick to enable different servers for
-   different tasks
+3. **Switch contexts**: Run `mcpick -p <other-profile>` to quickly
+   switch server sets
 
 ### Adding New Servers
 
@@ -142,6 +186,7 @@ MCPick works with the standard Claude Code configuration format:
 - **MCPick Registry**: `~/.claude/mcpick/servers.json` (MCPick's
   server database)
 - **Backups**: `~/.claude/mcpick/backups/` (MCP configuration backups)
+- **Profiles**: `~/.claude/mcpick/profiles/` (predefined server sets)
 
 > **Note**: If your MCP servers do not appear in MCPick, ensure they
 > are configured at the global level in Claude Code
@@ -169,8 +214,6 @@ McPick is actively being developed with new features planned. See the
   [claude-code-settings-schema](https://github.com/spences10/claude-code-settings-schema)
 - **Permissions Management** - Interactive tool permission
   configuration with presets (Safe Mode, Dev Mode, Review Mode)
-- **Configuration Profiles** - Save and switch between complete
-  configuration snapshots for different workflows
 
 Have ideas for other features?
 [Open an issue](https://github.com/spences10/mcpick/issues) or check

@@ -1,7 +1,7 @@
-import { access, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { access, mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 
 type BaseDir = string;
 type ParentDir = string;
@@ -46,6 +46,16 @@ export function get_server_registry_path(): string {
 
 export function get_backups_dir(): string {
 	return join(get_mcpick_dir(), 'backups');
+}
+
+export function get_profiles_dir(): string {
+	return join(get_mcpick_dir(), 'profiles');
+}
+
+export function get_profile_path(name: string): string {
+	// Allow .json extension or add it
+	const filename = name.endsWith('.json') ? name : `${name}.json`;
+	return join(get_profiles_dir(), filename);
 }
 
 export function get_backup_filename(): string {
