@@ -1,5 +1,11 @@
 # mcpick
 
+## 0.0.6
+
+### Patch Changes
+
+- 413ff07: Add CLAUDE_CONFIG_DIR support for custom config locations
+
 ## 0.0.5
 
 ### Patch Changes
