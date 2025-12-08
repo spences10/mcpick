@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execSync } from 'node:child_process';
 import {
 	cancel,
 	intro,
@@ -213,6 +214,11 @@ async function main(): Promise<void> {
 						hint: 'Save current config as profile',
 					},
 					{
+						value: 'launch-claude' as MenuAction,
+						label: 'Launch Claude',
+						hint: 'Start Claude Code in current directory',
+					},
+					{
 						value: 'exit' as MenuAction,
 						label: 'Exit',
 						hint: 'Quit MCPick (Esc)',
@@ -244,6 +250,14 @@ async function main(): Promise<void> {
 				case 'save-profile':
 					await handle_save_profile();
 					break;
+				case 'launch-claude':
+					outro('Launching Claude Code...');
+					try {
+						execSync('exec claude', { stdio: 'inherit', shell: '/bin/bash' });
+					} catch {
+						// Claude exited - that's fine
+					}
+					process.exit(0);
 				case 'exit':
 					outro('Goodbye!');
 					process.exit(0);

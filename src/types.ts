@@ -32,4 +32,5 @@ export type MenuAction =
 	| 'restore'
 	| 'load-profile'
 	| 'save-profile'
+	| 'launch-claude'
 	| 'exit';
