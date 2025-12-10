@@ -1,7 +1,13 @@
-import { confirm, note, select, text } from '@clack/prompts';
+import { confirm, log, note, select, text } from '@clack/prompts';
 import { add_server_to_registry } from '../core/registry.js';
 import { validate_mcp_server } from '../core/validation.js';
-import { McpServer } from '../types.js';
+import { McpScope, McpServer } from '../types.js';
+import {
+	add_mcp_via_cli,
+	check_claude_cli,
+	get_scope_options,
+	get_scope_description,
+} from '../utils/claude-cli.js';
 
 function format_server_details(server: McpServer): string[] {
 	const details: string[] = [`Name: ${server.name}`];
@@ -39,7 +45,19 @@ function format_server_details(server: McpServer): string[] {
 
 export async function add_server(): Promise<void> {
 	try {
-		// First, ask how they want to configure the server
+		// Check if Claude CLI is available
+		const cli_available = await check_claude_cli();
+
+		// First, ask where to install the server (scope)
+		const scope = await select<McpScope>({
+			message: 'Where should this server be installed?',
+			options: get_scope_options(),
+			initialValue: 'local',
+		});
+
+		if (typeof scope === 'symbol') return;
+
+		// Then ask how they want to configure the server
 		const config_method = await select({
 			message: 'How would you like to add the server?',
 			options: [
@@ -60,7 +78,7 @@ export async function add_server(): Promise<void> {
 		if (typeof config_method === 'symbol') return;
 
 		if (config_method === 'json') {
-			return await add_server_from_json();
+			return await add_server_from_json(scope, cli_available);
 		}
 
 		const name = await text({
@@ -220,22 +238,45 @@ export async function add_server(): Promise<void> {
 		const details = format_server_details(
 			validated_server as McpServer,
 		);
+		details.push(`Scope: ${get_scope_description(scope)}`);
 
 		note(`Server to add:\n${details.join('\n')}`);
 
 		const should_add = await confirm({
-			message: 'Add this server to the registry?',
+			message: 'Add this server?',
 		});
 
 		if (typeof should_add === 'symbol' || !should_add) {
 			return;
 		}
 
+		// Always add to registry for profile/backup management
 		await add_server_to_registry(validated_server as McpServer);
 
-		note(
-			`Server "${validated_server.name}" added to registry successfully!`,
-		);
+		// Install via Claude CLI if available
+		if (cli_available) {
+			const result = await add_mcp_via_cli(
+				validated_server as McpServer,
+				scope,
+			);
+			if (result.success) {
+				note(
+					`Server "${validated_server.name}" installed successfully!\n` +
+						`Scope: ${get_scope_description(scope)}\n` +
+						`Also added to mcpick registry for profile management.`,
+				);
+			} else {
+				log.warn(
+					`CLI installation failed: ${result.error}\n` +
+						`Server added to registry only. Use 'claude mcp add' manually.`,
+				);
+			}
+		} else {
+			log.warn(
+				`Claude CLI not found. Server added to registry only.\n` +
+					`Install Claude Code CLI and run 'claude mcp add' to activate.`,
+			);
+		}
 	} catch (error) {
 		throw new Error(
 			`Failed to add server: ${
@@ -245,7 +286,10 @@ export async function add_server(): Promise<void> {
 	}
 }
 
-async function add_server_from_json(): Promise<void> {
+async function add_server_from_json(
+	scope: McpScope,
+	cli_available: boolean,
+): Promise<void> {
 	const json_input = await text({
 		message: 'Paste JSON configuration:',
 		placeholder:
@@ -310,22 +354,45 @@ async function add_server_from_json(): Promise<void> {
 		const details = format_server_details(
 			validated_server as McpServer,
 		);
+		details.push(`Scope: ${get_scope_description(scope)}`);
 
 		note(`Server to add:\n${details.join('\n')}`);
 
 		const should_add = await confirm({
-			message: 'Add this server to the registry?',
+			message: 'Add this server?',
 		});
 
 		if (typeof should_add === 'symbol' || !should_add) {
 			return;
 		}
 
+		// Always add to registry for profile/backup management
 		await add_server_to_registry(validated_server as McpServer);
 
-		note(
-			`Server "${validated_server.name}" added to registry successfully!`,
-		);
+		// Install via Claude CLI if available
+		if (cli_available) {
+			const result = await add_mcp_via_cli(
+				validated_server as McpServer,
+				scope,
+			);
+			if (result.success) {
+				note(
+					`Server "${validated_server.name}" installed successfully!\n` +
+						`Scope: ${get_scope_description(scope)}\n` +
+						`Also added to mcpick registry for profile management.`,
+				);
+			} else {
+				log.warn(
+					`CLI installation failed: ${result.error}\n` +
+						`Server added to registry only. Use 'claude mcp add' manually.`,
+				);
+			}
+		} else {
+			log.warn(
+				`Claude CLI not found. Server added to registry only.\n` +
+					`Install Claude Code CLI and run 'claude mcp add' to activate.`,
+			);
+		}
 	} catch (error) {
 		throw new Error(
 			`Failed to parse or validate JSON: ${
