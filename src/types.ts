@@ -33,3 +33,9 @@ export type MenuAction =
 	| 'load-profile'
 	| 'save-profile'
 	| 'exit';
+
+// Scope for MCP server installation
+// - local: Project-specific in ~/.claude.json (default)
+// - project: Shared via .mcp.json in project root
+// - user: Global in ~/.claude.json for all projects
+export type McpScope = 'local' | 'project' | 'user';
