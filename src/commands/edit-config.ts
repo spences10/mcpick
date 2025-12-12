@@ -2,6 +2,7 @@ import { log, multiselect, note, select } from '@clack/prompts';
 import {
 	create_config_from_servers,
 	get_enabled_servers,
+	get_enabled_servers_for_scope,
 	read_claude_config,
 	write_claude_config,
 } from '../core/config.js';
@@ -54,9 +55,8 @@ export async function edit_config(): Promise<void> {
 			return;
 		}
 
-		const currently_enabled = Object.keys(
-			current_config.mcpServers || {},
-		);
+		// Get currently enabled servers for the selected scope
+		const currently_enabled = await get_enabled_servers_for_scope(scope);
 
 		const server_choices = all_servers.map((server) => ({
 			value: server.name,
