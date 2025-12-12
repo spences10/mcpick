@@ -1,6 +1,11 @@
 import { access, readFile, writeFile } from 'node:fs/promises';
-import { ClaudeConfig, McpServer, McpServerBase } from '../types.js';
-import { get_claude_config_path } from '../utils/paths.js';
+import { ClaudeConfig, McpScope, McpServer, McpServerBase } from '../types.js';
+import {
+	get_claude_config_path,
+	get_current_project_path,
+	get_global_mcp_json_path,
+	get_project_mcp_json_path,
+} from '../utils/paths.js';
 import { validate_claude_config } from './validation.js';
 
 export async function read_claude_config(): Promise<ClaudeConfig> {
@@ -68,4 +73,110 @@ export function create_config_from_servers(
 	});
 
 	return { mcpServers: mcp_servers };
+}
+
+/**
+ * Read full Claude config including projects section
+ */
+async function read_claude_config_full(): Promise<any> {
+	const config_path = get_claude_config_path();
+
+	try {
+		await access(config_path);
+		const config_content = await readFile(config_path, 'utf-8');
+		return JSON.parse(config_content);
+	} catch (error) {
+		return { mcpServers: {}, projects: {} };
+	}
+}
+
+/**
+ * Read MCP servers for local scope (current project)
+ * Stored in ~/.claude.json -> projects[cwd].mcpServers
+ * Also searches parent directories since Claude CLI may store config at parent level
+ */
+async function read_local_mcp_servers(): Promise<string[]> {
+	const { dirname } = await import('node:path');
+	const { homedir } = await import('node:os');
+	const full_config = await read_claude_config_full();
+	const home = homedir();
+	let current_dir = get_current_project_path();
+
+	// Search current directory and parents for local config
+	while (current_dir && current_dir !== '/' && current_dir.length >= home.length) {
+		const project_config = full_config.projects?.[current_dir];
+		if (project_config?.mcpServers && Object.keys(project_config.mcpServers).length > 0) {
+			return Object.keys(project_config.mcpServers);
+		}
+		current_dir = dirname(current_dir);
+	}
+
+	return [];
+}
+
+/**
+ * Read MCP servers from .mcp.json in current project (project scope)
+ */
+async function read_project_mcp_servers(): Promise<string[]> {
+	const mcp_json_path = get_project_mcp_json_path();
+
+	try {
+		await access(mcp_json_path);
+		const content = await readFile(mcp_json_path, 'utf-8');
+		const parsed = JSON.parse(content);
+		const servers = parsed.mcpServers || {};
+		return Object.keys(servers);
+	} catch (error) {
+		return [];
+	}
+}
+
+/**
+ * Read MCP servers from ~/.claude.json -> mcpServers (user scope)
+ */
+async function read_user_mcp_servers(): Promise<string[]> {
+	const config = await read_claude_config();
+	return Object.keys(config.mcpServers || {});
+}
+
+/**
+ * Read MCP servers from .mcp.json files (project scope)
+ * Searches current directory and parents for .mcp.json
+ */
+async function find_and_read_project_mcp_json(): Promise<string[]> {
+	const { dirname } = await import('node:path');
+	let current_dir = get_current_project_path();
+	const home = (await import('node:os')).homedir();
+
+	// Search upward for .mcp.json, stop at home or root
+	while (current_dir && current_dir !== '/' && current_dir.length >= home.length) {
+		const mcp_path = `${current_dir}/.mcp.json`;
+		try {
+			await access(mcp_path);
+			const content = await readFile(mcp_path, 'utf-8');
+			const parsed = JSON.parse(content);
+			const servers = parsed.mcpServers || {};
+			return Object.keys(servers);
+		} catch {
+			// Not found, try parent
+		}
+		current_dir = dirname(current_dir);
+	}
+	return [];
+}
+
+/**
+ * Get currently enabled server names for a specific scope
+ */
+export async function get_enabled_servers_for_scope(
+	scope: McpScope,
+): Promise<string[]> {
+	switch (scope) {
+		case 'local':
+			return read_local_mcp_servers();
+		case 'project':
+			return find_and_read_project_mcp_json();
+		case 'user':
+			return read_user_mcp_servers();
+	}
 }

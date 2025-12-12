@@ -79,3 +79,24 @@ export async function ensure_directory_exists(
 		await mkdir(dir_path, { recursive: true });
 	}
 }
+
+/**
+ * Get the current working directory (project path)
+ */
+export function get_current_project_path(): string {
+	return process.cwd();
+}
+
+/**
+ * Get the path to .mcp.json in the current project directory (project scope)
+ */
+export function get_project_mcp_json_path(): string {
+	return join(get_current_project_path(), '.mcp.json');
+}
+
+/**
+ * Get the path to the global .mcp.json in home directory (user scope)
+ */
+export function get_global_mcp_json_path(): string {
+	return join(homedir(), '.mcp.json');
+}
