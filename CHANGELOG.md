@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.8
+
+### Patch Changes
+
+- 219d5fd: Add scope support for MCP server installation with Claude
+  CLI integration and shell injection fixes
+
 ## 0.0.7
 
 ### Patch Changes

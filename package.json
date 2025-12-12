@@ -1,6 +1,6 @@
 {
 	"name": "mcpick",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"description": "Dynamic MCP server configuration manager for Claude Code",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -35,7 +35,7 @@
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.29.8",
-		"@types/node": "^24.10.1",
+		"@types/node": "^25.0.1",
 		"prettier": "^3.7.4",
 		"typescript": "^5.9.3"
 	}
