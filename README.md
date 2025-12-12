@@ -84,18 +84,21 @@ McPick provides an intuitive CLI menu to:
 
 MCPick supports the three MCP server scopes used by Claude Code:
 
-| Scope | Description | Storage Location |
-|-------|-------------|------------------|
-| **Local** | Project-specific servers (default) | `~/.claude.json` → `projects[cwd].mcpServers` |
-| **Project** | Shared via `.mcp.json` in repository | `.mcp.json` in project root |
-| **User** | Global servers for all projects | `~/.claude.json` → `mcpServers` |
+| Scope       | Description                          | Storage Location                              |
+| ----------- | ------------------------------------ | --------------------------------------------- |
+| **Local**   | Project-specific servers (default)   | `~/.claude.json` → `projects[cwd].mcpServers` |
+| **Project** | Shared via `.mcp.json` in repository | `.mcp.json` in project root                   |
+| **User**    | Global servers for all projects      | `~/.claude.json` → `mcpServers`               |
 
 When you select "Enable / Disable MCP servers", MCPick will:
+
 1. Ask which scope you want to edit
 2. Show servers already enabled for that scope (pre-checked)
-3. Use `claude mcp add/remove` CLI commands for Local and Project scopes
+3. Use `claude mcp add/remove` CLI commands for Local and Project
+   scopes
 
-This integration ensures your changes are correctly applied to the right configuration location.
+This integration ensures your changes are correctly applied to the
+right configuration location.
 
 ### Smart Server Management
 
@@ -198,23 +201,27 @@ MCPick works with the standard Claude Code configuration format:
 
 ### File Locations
 
-- **Claude Config**: `~/.claude.json` (your main Claude Code configuration)
-- **Project Config**: `.mcp.json` (project-specific shared config, committed to git)
-- **MCPick Registry**: `~/.claude/mcpick/servers.json` (MCPick's server database)
+- **Claude Config**: `~/.claude.json` (your main Claude Code
+  configuration)
+- **Project Config**: `.mcp.json` (project-specific shared config,
+  committed to git)
+- **MCPick Registry**: `~/.claude/mcpick/servers.json` (MCPick's
+  server database)
 - **Backups**: `~/.claude/mcpick/backups/` (MCP configuration backups)
 - **Profiles**: `~/.claude/mcpick/profiles/` (predefined server sets)
 
 #### MCP Server Storage by Scope
 
-| Scope | Location | Use Case |
-|-------|----------|----------|
-| Local | `~/.claude.json` → `projects["/path/to/project"].mcpServers` | Personal project config |
-| Project | `.mcp.json` in project root | Shared team config (commit to git) |
-| User | `~/.claude.json` → `mcpServers` | Global servers for all projects |
+| Scope   | Location                                                     | Use Case                           |
+| ------- | ------------------------------------------------------------ | ---------------------------------- |
+| Local   | `~/.claude.json` → `projects["/path/to/project"].mcpServers` | Personal project config            |
+| Project | `.mcp.json` in project root                                  | Shared team config (commit to git) |
+| User    | `~/.claude.json` → `mcpServers`                              | Global servers for all projects    |
 
-> **Note**: MCPick automatically detects servers in parent directories.
-> If you have local servers configured at `/Users/you/projects` and run
-> MCPick from `/Users/you/projects/myapp`, it will find and display them.
+> **Note**: MCPick automatically detects servers in parent
+> directories. If you have local servers configured at
+> `/Users/you/projects` and run MCPick from
+> `/Users/you/projects/myapp`, it will find and display them.
 
 ## Safety Features
 

@@ -14,8 +14,8 @@ import { McpScope } from '../types.js';
 import {
 	add_mcp_via_cli,
 	check_claude_cli,
-	get_scope_options,
 	get_scope_description,
+	get_scope_options,
 	remove_mcp_via_cli,
 } from '../utils/claude-cli.js';
 
@@ -56,7 +56,8 @@ export async function edit_config(): Promise<void> {
 		}
 
 		// Get currently enabled servers for the selected scope
-		const currently_enabled = await get_enabled_servers_for_scope(scope);
+		const currently_enabled =
+			await get_enabled_servers_for_scope(scope);
 
 		const server_choices = all_servers.map((server) => ({
 			value: server.name,

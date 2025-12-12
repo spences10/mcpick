@@ -1,9 +1,13 @@
 import { access, readFile, writeFile } from 'node:fs/promises';
-import { ClaudeConfig, McpScope, McpServer, McpServerBase } from '../types.js';
+import {
+	ClaudeConfig,
+	McpScope,
+	McpServer,
+	McpServerBase,
+} from '../types.js';
 import {
 	get_claude_config_path,
 	get_current_project_path,
-	get_global_mcp_json_path,
 	get_project_mcp_json_path,
 } from '../utils/paths.js';
 import { validate_claude_config } from './validation.js';
@@ -103,9 +107,16 @@ async function read_local_mcp_servers(): Promise<string[]> {
 	let current_dir = get_current_project_path();
 
 	// Search current directory and parents for local config
-	while (current_dir && current_dir !== '/' && current_dir.length >= home.length) {
+	while (
+		current_dir &&
+		current_dir !== '/' &&
+		current_dir.length >= home.length
+	) {
 		const project_config = full_config.projects?.[current_dir];
-		if (project_config?.mcpServers && Object.keys(project_config.mcpServers).length > 0) {
+		if (
+			project_config?.mcpServers &&
+			Object.keys(project_config.mcpServers).length > 0
+		) {
 			return Object.keys(project_config.mcpServers);
 		}
 		current_dir = dirname(current_dir);
@@ -149,7 +160,11 @@ async function find_and_read_project_mcp_json(): Promise<string[]> {
 	const home = (await import('node:os')).homedir();
 
 	// Search upward for .mcp.json, stop at home or root
-	while (current_dir && current_dir !== '/' && current_dir.length >= home.length) {
+	while (
+		current_dir &&
+		current_dir !== '/' &&
+		current_dir.length >= home.length
+	) {
 		const mcp_path = `${current_dir}/.mcp.json`;
 		try {
 			await access(mcp_path);

@@ -30,9 +30,20 @@ function shell_escape(str: string): string {
 }
 
 /**
+ * Validate environment variable key
+ * Must start with letter or underscore, contain only alphanumeric and underscores
+ */
+function is_valid_env_key(key: string): boolean {
+	return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
+}
+
+/**
  * Build the claude mcp add command for a server
  */
-function build_add_command(server: McpServer, scope: McpScope): string {
+function build_add_command(
+	server: McpServer,
+	scope: McpScope,
+): string {
 	const parts: string[] = ['claude', 'mcp', 'add'];
 
 	// Server name
@@ -47,17 +58,19 @@ function build_add_command(server: McpServer, scope: McpScope): string {
 
 	// Handle different transport types
 	if (transport === 'stdio') {
-		// Environment variables
+		// Environment variables (skip invalid keys to prevent injection)
 		if (server.env) {
 			for (const [key, value] of Object.entries(server.env)) {
-				parts.push('-e', `${key}=${shell_escape(value)}`);
+				if (is_valid_env_key(key)) {
+					parts.push('-e', `${key}=${shell_escape(value)}`);
+				}
 			}
 		}
 
 		// Command and args (after --)
 		if ('command' in server && server.command) {
 			parts.push('--');
-			parts.push(server.command);
+			parts.push(shell_escape(server.command));
 			if (server.args && server.args.length > 0) {
 				parts.push(...server.args.map((arg) => shell_escape(arg)));
 			}
@@ -65,7 +78,7 @@ function build_add_command(server: McpServer, scope: McpScope): string {
 	} else {
 		// HTTP or SSE transport
 		if ('url' in server && server.url) {
-			parts.push(server.url);
+			parts.push(shell_escape(server.url));
 		}
 	}
 
@@ -106,7 +119,9 @@ export async function add_mcp_via_cli(
 /**
  * Remove an MCP server using Claude CLI
  */
-export async function remove_mcp_via_cli(name: string): Promise<CliResult> {
+export async function remove_mcp_via_cli(
+	name: string,
+): Promise<CliResult> {
 	// Check if CLI is available
 	const cli_available = await check_claude_cli();
 	if (!cli_available) {
