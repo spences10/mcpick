@@ -32,6 +32,7 @@ export type MenuAction =
 	| 'restore'
 	| 'load-profile'
 	| 'save-profile'
+	| 'launch-claude'
 	| 'exit';
 
 // Scope for MCP server installation
