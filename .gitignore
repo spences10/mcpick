@@ -4,3 +4,11 @@ dist/
 .git/
 .DS_Store
 *.tgz
+# AI/editor config
+.claude/
+CLAUDE.md
+LESSONS_LEARNED.md
+CURRENT_WORK.md
+docs/CURRENT_WORK.md
+docs/LESSONS_LEARNED.md
+AGENTS.md
