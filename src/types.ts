@@ -27,12 +27,19 @@ export interface BackupInfo {
 
 export type MenuAction =
 	| 'edit-config'
+	| 'edit-plugins'
 	| 'backup'
 	| 'add-server'
 	| 'restore'
 	| 'load-profile'
 	| 'save-profile'
 	| 'exit';
+
+export interface ClaudeSettings {
+	enabledPlugins?: Record<string, boolean>;
+	extraKnownMarketplaces?: Record<string, unknown>;
+	[key: string]: unknown;
+}
 
 // Scope for MCP server installation
 // - local: Project-specific in ~/.claude.json (default)
