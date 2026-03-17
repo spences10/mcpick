@@ -36,6 +36,10 @@ export function get_claude_config_path(): string {
 	return join(parentDir, '.claude.json');
 }
 
+export function get_claude_settings_path(): string {
+	return join(get_base_dir().baseDir, 'settings.json');
+}
+
 export function get_mcpick_dir(): string {
 	return join(get_base_dir().baseDir, 'mcpick');
 }

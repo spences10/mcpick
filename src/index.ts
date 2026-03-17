@@ -12,6 +12,7 @@ import {
 import { add_server } from './commands/add-server.js';
 import { backup_config } from './commands/backup.js';
 import { edit_config } from './commands/edit-config.js';
+import { edit_plugins } from './commands/edit-plugins.js';
 import { restore_config } from './commands/restore.js';
 import { write_claude_config } from './core/config.js';
 import {
@@ -188,6 +189,11 @@ async function main(): Promise<void> {
 						hint: 'Toggle MCP servers on/off',
 					},
 					{
+						value: 'edit-plugins' as MenuAction,
+						label: 'Enable / Disable plugins',
+						hint: 'Toggle Claude Code plugins on/off',
+					},
+					{
 						value: 'backup' as MenuAction,
 						label: 'Backup config',
 						hint: 'Create a timestamped backup',
@@ -228,6 +234,9 @@ async function main(): Promise<void> {
 			switch (action) {
 				case 'edit-config':
 					await edit_config();
+					break;
+				case 'edit-plugins':
+					await edit_plugins();
 					break;
 				case 'backup':
 					await backup_config();
