@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.9
+
+### Patch Changes
+
+- d4f4b5c: Add plugin toggle support - enable/disable Claude Code
+  plugins from the mcpick menu
+
 ## 0.0.8
 
 ### Patch Changes
