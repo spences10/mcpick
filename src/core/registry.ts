@@ -66,7 +66,20 @@ export async function add_server_to_registry(
 export async function get_all_available_servers(): Promise<
 	McpServer[]
 > {
+	const { get_enabled_servers, read_claude_config } =
+		await import('./config.js');
 	const registry = await read_server_registry();
+	const config = await read_claude_config();
+	const config_servers = get_enabled_servers(config);
+
+	// Merge: registry is base, config servers fill in any missing
+	const known_names = new Set(registry.servers.map((s) => s.name));
+	for (const server of config_servers) {
+		if (!known_names.has(server.name)) {
+			registry.servers.push(server);
+		}
+	}
+
 	return registry.servers;
 }
 

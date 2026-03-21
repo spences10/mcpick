@@ -1,5 +1,5 @@
 import { exec } from 'node:child_process';
-import { readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { readdir, readFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type {
@@ -9,6 +9,7 @@ import type {
 	KnownMarketplacesFile,
 	MarketplaceManifest,
 } from '../types.js';
+import { atomic_json_write } from '../utils/atomic-write.js';
 import {
 	get_installed_plugins_path,
 	get_known_marketplaces_path,
@@ -40,10 +41,9 @@ export async function read_installed_plugins(): Promise<InstalledPluginsFile> {
 export async function write_installed_plugins(
 	data: InstalledPluginsFile,
 ): Promise<void> {
-	await writeFile(
+	await atomic_json_write(
 		get_installed_plugins_path(),
-		JSON.stringify(data, null, 2),
-		'utf-8',
+		() => data as unknown as Record<string, unknown>,
 	);
 }
 

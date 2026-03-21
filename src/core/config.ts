@@ -1,10 +1,11 @@
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import {
 	ClaudeConfig,
 	McpScope,
 	McpServer,
 	McpServerBase,
 } from '../types.js';
+import { atomic_json_write } from '../utils/atomic-write.js';
 import {
 	get_claude_config_path,
 	get_current_project_path,
@@ -35,22 +36,10 @@ export async function read_claude_config(): Promise<ClaudeConfig> {
 export async function write_claude_config(
 	config: ClaudeConfig,
 ): Promise<void> {
-	const config_path = get_claude_config_path();
-
-	// Read the entire existing file to preserve all other sections
-	let existing_config: any = {};
-	try {
-		const existing_content = await readFile(config_path, 'utf-8');
-		existing_config = JSON.parse(existing_content);
-	} catch (error) {
-		// If file doesn't exist or is invalid, start with empty object
-	}
-
-	// Only update the mcpServers section, preserve everything else
-	existing_config.mcpServers = config.mcpServers;
-
-	const config_content = JSON.stringify(existing_config, null, 2);
-	await writeFile(config_path, config_content, 'utf-8');
+	await atomic_json_write(get_claude_config_path(), (existing) => {
+		existing.mcpServers = config.mcpServers;
+		return existing;
+	});
 }
 
 export function get_enabled_servers(

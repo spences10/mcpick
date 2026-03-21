@@ -1,5 +1,6 @@
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { ClaudeSettings } from '../types.js';
+import { atomic_json_write } from '../utils/atomic-write.js';
 import { get_claude_settings_path } from '../utils/paths.js';
 
 export async function read_claude_settings(): Promise<ClaudeSettings> {
@@ -24,26 +25,12 @@ export async function read_claude_settings(): Promise<ClaudeSettings> {
 export async function write_claude_settings(
 	updates: Partial<ClaudeSettings>,
 ): Promise<void> {
-	const settings_path = get_claude_settings_path();
-
-	let existing: ClaudeSettings = {};
-	try {
-		const content = await readFile(settings_path, 'utf-8');
-		existing = JSON.parse(content);
-	} catch {
-		// Start with empty if file doesn't exist
-	}
-
-	// Merge only the keys we're updating
-	for (const [key, value] of Object.entries(updates)) {
-		existing[key] = value;
-	}
-
-	await writeFile(
-		settings_path,
-		JSON.stringify(existing, null, 2),
-		'utf-8',
-	);
+	await atomic_json_write(get_claude_settings_path(), (existing) => {
+		for (const [key, value] of Object.entries(updates)) {
+			existing[key] = value;
+		}
+		return existing;
+	});
 }
 
 export interface PluginInfo {
