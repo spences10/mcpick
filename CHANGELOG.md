@@ -1,5 +1,14 @@
 # mcpick
 
+## 0.0.10
+
+### Patch Changes
+
+- ffe29b3: Add non-interactive CLI mode with citty for scripting and
+  LLM usage
+- fff6c0d: add plugin cache management with staleness detection and
+  cleanup
+
 ## 0.0.9
 
 ### Patch Changes
