@@ -208,17 +208,27 @@ npx mcpick cache refresh
 
 ### Plugin Management
 
-Toggle Claude Code marketplace plugins on and off:
+Install, update, and toggle Claude Code marketplace plugins:
 
 ```bash
 # List all plugins and their status
 npx mcpick plugins list
 npx mcpick plugins list --json
 
+# Install/uninstall a plugin (wraps claude plugin CLI)
+npx mcpick plugins install plugin-name@marketplace
+npx mcpick plugins uninstall plugin-name@marketplace
+
+# Update a plugin to latest version
+npx mcpick plugins update plugin-name@marketplace
+
 # Enable/disable a plugin
 npx mcpick plugins enable plugin-name@marketplace
 npx mcpick plugins disable plugin-name@marketplace
 ```
+
+All plugin commands support `--scope` (user, project, local) and
+`--json` flags.
 
 ### CLI Subcommands
 
@@ -244,6 +254,9 @@ npx mcpick profile save <name>     # Save current config
 npx mcpick plugins list            # List plugins
 npx mcpick plugins enable <key>    # Enable plugin
 npx mcpick plugins disable <key>   # Disable plugin
+npx mcpick plugins install <key>   # Install from marketplace
+npx mcpick plugins uninstall <key> # Remove plugin
+npx mcpick plugins update <key>    # Update to latest version
 
 # Cache management
 npx mcpick cache status            # Show staleness info

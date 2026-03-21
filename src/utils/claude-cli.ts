@@ -145,6 +145,96 @@ export async function remove_mcp_via_cli(
 }
 
 /**
+ * Install a plugin via Claude CLI
+ */
+export async function install_plugin_via_cli(
+	key: string,
+	scope: 'user' | 'project' | 'local' = 'user',
+): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		await execAsync(
+			`claude plugin install ${shell_escape(key)} --scope ${scope}`,
+		);
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to install plugin: ${message}`,
+		};
+	}
+}
+
+/**
+ * Uninstall a plugin via Claude CLI
+ */
+export async function uninstall_plugin_via_cli(
+	key: string,
+	scope: 'user' | 'project' | 'local' = 'user',
+): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		await execAsync(
+			`claude plugin uninstall ${shell_escape(key)} --scope ${scope}`,
+		);
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to uninstall plugin: ${message}`,
+		};
+	}
+}
+
+/**
+ * Update a plugin via Claude CLI
+ */
+export async function update_plugin_via_cli(
+	key: string,
+	scope: 'user' | 'project' | 'local' = 'user',
+): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		await execAsync(
+			`claude plugin update ${shell_escape(key)} --scope ${scope}`,
+		);
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to update plugin: ${message}`,
+		};
+	}
+}
+
+/**
  * Get the scope description for display
  */
 export function get_scope_description(scope: McpScope): string {
