@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.12
+
+### Patch Changes
+
+- b4f38d5: fix: discover externally-added servers and use atomic JSON
+  writes
+
 ## 0.0.11
 
 ### Patch Changes
