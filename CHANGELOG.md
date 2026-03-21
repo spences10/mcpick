@@ -1,5 +1,15 @@
 # mcpick
 
+## 0.0.11
+
+### Patch Changes
+
+- 7ec3323: feat: add plugin install, uninstall, and update commands
+  via Claude CLI
+- 99b2bf3: feat: add plugin install, uninstall, and update to
+  interactive menu
+- 9b1c6d7: feat: add plugin support to backup, restore, and profiles
+
 ## 0.0.10
 
 ### Patch Changes
