@@ -191,8 +191,8 @@ async function main(): Promise<void> {
 					},
 					{
 						value: 'edit-plugins' as MenuAction,
-						label: 'Enable / Disable plugins',
-						hint: 'Toggle Claude Code plugins on/off',
+						label: 'Manage plugins',
+						hint: 'Toggle, install, uninstall, or update plugins',
 					},
 					{
 						value: 'manage-cache' as MenuAction,
