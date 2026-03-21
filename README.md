@@ -1,8 +1,8 @@
 # McPick
 
-A CLI tool for dynamically managing MCP server configurations in
-Claude Code. Enable and disable MCP servers on-demand to optimize
-context usage and performance.
+A CLI tool for managing MCP servers, plugins, and plugin caches in
+Claude Code. Toggle servers and plugins on/off, manage stale plugin
+caches, and optimise context usage and performance.
 
 ## Installation
 
@@ -51,10 +51,15 @@ This can lead to:
 
 ## The Solution
 
-McPick provides an intuitive CLI menu to:
+McPick provides an intuitive CLI menu and non-interactive subcommands
+to:
 
 - ✅ **Toggle servers on/off** - Enable only the MCP servers you need
   for your current task
+- 🔌 **Toggle plugins on/off** - Enable or disable Claude Code
+  marketplace plugins
+- 🗑️ **Manage plugin cache** - Detect stale plugins, clear caches,
+  clean orphaned versions, refresh marketplaces
 - 📁 **Manage server registry** - Keep a database of all your
   available MCP servers
 - 🔄 **Safe configuration** - Only modifies the `mcpServers` section,
@@ -71,6 +76,8 @@ McPick provides an intuitive CLI menu to:
 │
 ◆  What would you like to do?
 │  ● Enable / Disable MCP servers (Toggle MCP servers on/off)
+│  ○ Enable / Disable plugins (Toggle Claude Code plugins on/off)
+│  ○ Manage plugin cache (View, clear, or refresh plugin caches)
 │  ○ Backup config
 │  ○ Add MCP server
 │  ○ Restore from backup
@@ -162,6 +169,91 @@ Or use full format with `mcpServers` wrapper:
 }
 ```
 
+### Plugin Cache Management
+
+Claude Code caches marketplace plugins at `~/.claude/plugins/cache/`.
+When marketplace authors update plugins, your cached versions can go
+stale. McPick detects this and lets you fix it.
+
+#### Interactive
+
+Select "Manage plugin cache" from the main menu to:
+
+- **View cache status** - See all cached plugins with staleness
+  indicators (version mismatch, commits behind, orphaned versions)
+- **Clear plugin caches** - Refreshes the marketplace and clears
+  selected caches so they rebuild with the latest version
+- **Clean orphaned versions** - Remove old version directories marked
+  as orphaned
+- **Refresh marketplaces** - Git pull all marketplace clones to get
+  latest plugin listings
+
+#### CLI Subcommands
+
+```bash
+# Show cache status for all plugins
+npx mcpick cache status
+npx mcpick cache status --json
+
+# Clear a specific plugin cache (refreshes marketplace first)
+npx mcpick cache clear plugin-name@marketplace
+npx mcpick cache clear --all
+
+# Remove orphaned version directories
+npx mcpick cache clean-orphaned
+
+# Refresh all marketplace clones
+npx mcpick cache refresh
+```
+
+### Plugin Management
+
+Toggle Claude Code marketplace plugins on and off:
+
+```bash
+# List all plugins and their status
+npx mcpick plugins list
+npx mcpick plugins list --json
+
+# Enable/disable a plugin
+npx mcpick plugins enable plugin-name@marketplace
+npx mcpick plugins disable plugin-name@marketplace
+```
+
+### CLI Subcommands
+
+McPick supports both an interactive menu (default) and non-interactive
+CLI subcommands for scripting and LLM tool use:
+
+```bash
+# MCP server management
+npx mcpick list                    # List servers
+npx mcpick enable <server>         # Enable a server
+npx mcpick disable <server>        # Disable a server
+npx mcpick add --name <n> ...      # Add a server
+npx mcpick remove <server>         # Remove a server
+
+# Backups and profiles
+npx mcpick backup                  # Create backup
+npx mcpick restore [file]          # Restore from backup
+npx mcpick profile list            # List profiles
+npx mcpick profile load <name>     # Load a profile
+npx mcpick profile save <name>     # Save current config
+
+# Plugin management
+npx mcpick plugins list            # List plugins
+npx mcpick plugins enable <key>    # Enable plugin
+npx mcpick plugins disable <key>   # Disable plugin
+
+# Cache management
+npx mcpick cache status            # Show staleness info
+npx mcpick cache clear [key]       # Clear plugin cache
+npx mcpick cache clean-orphaned    # Remove orphaned dirs
+npx mcpick cache refresh           # Git pull marketplaces
+```
+
+All subcommands support `--json` for machine-readable output.
+
 ### Typical Workflow
 
 1. **Before a coding session**: Run `mcpick -p <profile>` or use the
@@ -209,6 +301,11 @@ MCPick works with the standard Claude Code configuration format:
   server database)
 - **Backups**: `~/.claude/mcpick/backups/` (MCP configuration backups)
 - **Profiles**: `~/.claude/mcpick/profiles/` (predefined server sets)
+- **Plugin Cache**: `~/.claude/plugins/cache/` (cached plugin files)
+- **Installed Plugins**: `~/.claude/plugins/installed_plugins.json`
+  (plugin install registry)
+- **Marketplaces**: `~/.claude/plugins/marketplaces/` (marketplace git
+  clones)
 
 #### MCP Server Storage by Scope
 
