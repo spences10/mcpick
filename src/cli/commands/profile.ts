@@ -5,6 +5,7 @@ import {
 	load_profile,
 	save_profile,
 } from '../../core/profile.js';
+import { write_claude_settings } from '../../core/settings.js';
 import { error, output } from '../output.js';
 
 const list = defineCommand({
@@ -30,7 +31,11 @@ const list = defineCommand({
 				return;
 			}
 			for (const p of profiles) {
-				console.log(`${p.name}  (${p.serverCount} servers)`);
+				const parts = [`${p.serverCount} servers`];
+				if (p.pluginCount > 0) {
+					parts.push(`${p.pluginCount} plugins`);
+				}
+				console.log(`${p.name}  (${parts.join(', ')})`);
 			}
 		}
 	},
@@ -55,23 +60,36 @@ const load = defineCommand({
 	},
 	async run({ args }) {
 		try {
-			const config = await load_profile(args.name);
-			await write_claude_config(config);
+			const profile = await load_profile(args.name);
+			await write_claude_config(profile.config);
 			const server_count = Object.keys(
-				config.mcpServers || {},
+				profile.config.mcpServers || {},
 			).length;
+
+			let plugin_count = 0;
+			if (profile.enabledPlugins) {
+				await write_claude_settings({
+					enabledPlugins: profile.enabledPlugins,
+				});
+				plugin_count = Object.keys(profile.enabledPlugins).length;
+			}
 
 			if (args.json) {
 				output(
 					{
 						profile: args.name,
 						servers: server_count,
+						plugins: plugin_count,
 					},
 					true,
 				);
 			} else {
+				const parts = [`${server_count} servers`];
+				if (plugin_count > 0) {
+					parts.push(`${plugin_count} plugins`);
+				}
 				console.log(
-					`Profile '${args.name}' applied (${server_count} servers)`,
+					`Profile '${args.name}' applied (${parts.join(', ')})`,
 				);
 			}
 		} catch (err) {
@@ -101,19 +119,24 @@ const save = defineCommand({
 	},
 	async run({ args }) {
 		try {
-			const server_count = await save_profile(args.name);
+			const counts = await save_profile(args.name);
 
 			if (args.json) {
 				output(
 					{
 						profile: args.name,
-						servers: server_count,
+						servers: counts.serverCount,
+						plugins: counts.pluginCount,
 					},
 					true,
 				);
 			} else {
+				const parts = [`${counts.serverCount} servers`];
+				if (counts.pluginCount > 0) {
+					parts.push(`${counts.pluginCount} plugins`);
+				}
 				console.log(
-					`Profile '${args.name}' saved (${server_count} servers)`,
+					`Profile '${args.name}' saved (${parts.join(', ')})`,
 				);
 			}
 		} catch (err) {
@@ -127,7 +150,7 @@ const save = defineCommand({
 export default defineCommand({
 	meta: {
 		name: 'profile',
-		description: 'Manage MCP server profiles',
+		description: 'Manage profiles (MCP servers + plugins)',
 	},
 	subCommands: { list, load, save },
 });

@@ -21,6 +21,7 @@ import {
 	load_profile,
 	save_profile,
 } from './core/profile.js';
+import { write_claude_settings } from './core/settings.js';
 import { MenuAction } from './types.js';
 
 interface CliArgs {
@@ -52,14 +53,21 @@ async function apply_profile(name: string): Promise<void> {
 	intro(`MCPick - Loading profile: ${name}`);
 
 	try {
-		const profile_config = await load_profile(name);
-		await write_claude_config(profile_config);
+		const profile = await load_profile(name);
+		await write_claude_config(profile.config);
 		const server_count = Object.keys(
-			profile_config.mcpServers || {},
+			profile.config.mcpServers || {},
 		).length;
-		log.success(
-			`Profile '${name}' applied (${server_count} servers)`,
-		);
+		const parts = [`${server_count} servers`];
+		if (profile.enabledPlugins) {
+			await write_claude_settings({
+				enabledPlugins: profile.enabledPlugins,
+			});
+			parts.push(
+				`${Object.keys(profile.enabledPlugins).length} plugins`,
+			);
+		}
+		log.success(`Profile '${name}' applied (${parts.join(', ')})`);
 		outro('Done!');
 	} catch (error) {
 		if (error instanceof Error) {
@@ -91,8 +99,12 @@ async function create_profile(name: string): Promise<void> {
 	intro(`MCPick - Saving profile: ${name}`);
 
 	try {
-		const server_count = await save_profile(name);
-		log.success(`Profile '${name}' saved (${server_count} servers)`);
+		const counts = await save_profile(name);
+		const parts = [`${counts.serverCount} servers`];
+		if (counts.pluginCount > 0) {
+			parts.push(`${counts.pluginCount} plugins`);
+		}
+		log.success(`Profile '${name}' saved (${parts.join(', ')})`);
 		outro('Done!');
 	} catch (error) {
 		if (error instanceof Error) {
@@ -117,22 +129,37 @@ async function handle_load_profile(): Promise<void> {
 
 	const profile_name = await select({
 		message: 'Select a profile to load:',
-		options: profiles.map((p) => ({
-			value: p.name,
-			label: p.name,
-			hint: `${p.serverCount} servers`,
-		})),
+		options: profiles.map((p) => {
+			const parts = [`${p.serverCount} servers`];
+			if (p.pluginCount > 0) {
+				parts.push(`${p.pluginCount} plugins`);
+			}
+			return {
+				value: p.name,
+				label: p.name,
+				hint: parts.join(', '),
+			};
+		}),
 	});
 
 	if (isCancel(profile_name)) return;
 
-	const profile_config = await load_profile(profile_name);
-	await write_claude_config(profile_config);
+	const profile = await load_profile(profile_name);
+	await write_claude_config(profile.config);
 	const server_count = Object.keys(
-		profile_config.mcpServers || {},
+		profile.config.mcpServers || {},
 	).length;
+	const parts = [`${server_count} servers`];
+	if (profile.enabledPlugins) {
+		await write_claude_settings({
+			enabledPlugins: profile.enabledPlugins,
+		});
+		parts.push(
+			`${Object.keys(profile.enabledPlugins).length} plugins`,
+		);
+	}
 	log.success(
-		`Profile '${profile_name}' applied (${server_count} servers)`,
+		`Profile '${profile_name}' applied (${parts.join(', ')})`,
 	);
 }
 
@@ -152,8 +179,12 @@ async function handle_save_profile(): Promise<void> {
 
 	if (isCancel(name)) return;
 
-	const server_count = await save_profile(name);
-	log.success(`Profile '${name}' saved (${server_count} servers)`);
+	const counts = await save_profile(name);
+	const parts = [`${counts.serverCount} servers`];
+	if (counts.pluginCount > 0) {
+		parts.push(`${counts.pluginCount} plugins`);
+	}
+	log.success(`Profile '${name}' saved (${parts.join(', ')})`);
 }
 
 async function main(): Promise<void> {

@@ -89,53 +89,67 @@ export async function sync_servers_to_registry(
 	await write_server_registry(registry);
 }
 
-export async function list_backups(): Promise<BackupInfo[]> {
-	const backups_dir = get_backups_dir();
+function parse_backups(
+	prefix: string,
+	pattern: RegExp,
+): () => Promise<BackupInfo[]> {
+	return async () => {
+		const backups_dir = get_backups_dir();
 
-	try {
-		await access(backups_dir);
-		const files = await readdir(backups_dir);
+		try {
+			await access(backups_dir);
+			const files = await readdir(backups_dir);
 
-		const backup_files = files
-			.filter(
-				(file) =>
-					file.startsWith('mcp-servers-') && file.endsWith('.json'),
-			)
-			.map((file) => {
-				const timestamp_match = file.match(
-					/mcp-servers-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})\.json/,
+			const backup_files = files
+				.filter(
+					(file) => file.startsWith(prefix) && file.endsWith('.json'),
+				)
+				.map((file) => {
+					const timestamp_match = file.match(pattern);
+					if (!timestamp_match) return null;
+
+					const [, year, month, day, hour, minute, second] =
+						timestamp_match;
+					const timestamp = new Date(
+						parseInt(year),
+						parseInt(month) - 1,
+						parseInt(day),
+						parseInt(hour),
+						parseInt(minute),
+						parseInt(second),
+					);
+
+					return {
+						filename: file,
+						timestamp,
+						path: join(backups_dir, file),
+					};
+				})
+				.filter((backup): backup is BackupInfo => backup !== null)
+				.sort(
+					(a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
 				);
-				if (!timestamp_match) return null;
 
-				const [, year, month, day, hour, minute, second] =
-					timestamp_match;
-				const timestamp = new Date(
-					parseInt(year),
-					parseInt(month) - 1,
-					parseInt(day),
-					parseInt(hour),
-					parseInt(minute),
-					parseInt(second),
-				);
-
-				return {
-					filename: file,
-					timestamp,
-					path: join(backups_dir, file),
-				};
-			})
-			.filter((backup): backup is BackupInfo => backup !== null)
-			.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-		return backup_files;
-	} catch (error) {
-		if (
-			error instanceof Error &&
-			'code' in error &&
-			error.code === 'ENOENT'
-		) {
-			return [];
+			return backup_files;
+		} catch (error) {
+			if (
+				error instanceof Error &&
+				'code' in error &&
+				error.code === 'ENOENT'
+			) {
+				return [];
+			}
+			throw error;
 		}
-		throw error;
-	}
+	};
 }
+
+export const list_backups = parse_backups(
+	'mcp-servers-',
+	/mcp-servers-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})\.json/,
+);
+
+export const list_plugin_backups = parse_backups(
+	'plugins-',
+	/plugins-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})\.json/,
+);

@@ -62,7 +62,7 @@ export function get_profile_path(name: string): string {
 	return join(get_profiles_dir(), filename);
 }
 
-export function get_backup_filename(): string {
+function format_backup_timestamp(): string {
 	const now = new Date();
 	const year = now.getFullYear();
 	const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -71,7 +71,15 @@ export function get_backup_filename(): string {
 	const minute = String(now.getMinutes()).padStart(2, '0');
 	const second = String(now.getSeconds()).padStart(2, '0');
 
-	return `mcp-servers-${year}-${month}-${day}-${hour}${minute}${second}.json`;
+	return `${year}-${month}-${day}-${hour}${minute}${second}`;
+}
+
+export function get_backup_filename(): string {
+	return `mcp-servers-${format_backup_timestamp()}.json`;
+}
+
+export function get_plugin_backup_filename(): string {
+	return `plugins-${format_backup_timestamp()}.json`;
 }
 
 export async function ensure_directory_exists(
