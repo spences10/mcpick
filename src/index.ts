@@ -13,6 +13,7 @@ import { add_server } from './commands/add-server.js';
 import { backup_config } from './commands/backup.js';
 import { edit_config } from './commands/edit-config.js';
 import { edit_plugins } from './commands/edit-plugins.js';
+import { manage_cache } from './commands/manage-cache.js';
 import { restore_config } from './commands/restore.js';
 import { write_claude_config } from './core/config.js';
 import {
@@ -194,6 +195,11 @@ async function main(): Promise<void> {
 						hint: 'Toggle Claude Code plugins on/off',
 					},
 					{
+						value: 'manage-cache' as MenuAction,
+						label: 'Manage plugin cache',
+						hint: 'View, clear, or refresh plugin caches',
+					},
+					{
 						value: 'backup' as MenuAction,
 						label: 'Backup config',
 						hint: 'Create a timestamped backup',
@@ -237,6 +243,9 @@ async function main(): Promise<void> {
 					break;
 				case 'edit-plugins':
 					await edit_plugins();
+					break;
+				case 'manage-cache':
+					await manage_cache();
 					break;
 				case 'backup':
 					await backup_config();
@@ -290,10 +299,15 @@ const SUBCOMMANDS = new Set([
 	'restore',
 	'profile',
 	'plugins',
+	'cache',
 ]);
 
 const arg = process.argv[2];
-if ((arg && SUBCOMMANDS.has(arg)) || arg === '--help' || arg === '-h') {
+if (
+	(arg && SUBCOMMANDS.has(arg)) ||
+	arg === '--help' ||
+	arg === '-h'
+) {
 	import('./cli/index.js').then((m) => m.run());
 } else {
 	main().catch((error) => {

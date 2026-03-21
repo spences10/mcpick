@@ -28,12 +28,74 @@ export interface BackupInfo {
 export type MenuAction =
 	| 'edit-config'
 	| 'edit-plugins'
+	| 'manage-cache'
 	| 'backup'
 	| 'add-server'
 	| 'restore'
 	| 'load-profile'
 	| 'save-profile'
 	| 'exit';
+
+// installed_plugins.json v2 format
+export interface InstalledPluginEntry {
+	scope: string;
+	installPath: string;
+	version: string;
+	installedAt: string;
+	lastUpdated: string;
+	gitCommitSha: string;
+}
+
+export interface InstalledPluginsFile {
+	version: number;
+	plugins: Record<string, InstalledPluginEntry[]>;
+}
+
+// known_marketplaces.json format
+export interface MarketplaceSource {
+	source: 'github' | 'git';
+	repo?: string;
+	url?: string;
+}
+
+export interface KnownMarketplace {
+	source: MarketplaceSource;
+	installLocation: string;
+	lastUpdated: string;
+	autoUpdate?: boolean;
+}
+
+export type KnownMarketplacesFile = Record<string, KnownMarketplace>;
+
+// marketplace.json plugin entry
+export interface MarketplacePluginEntry {
+	name: string;
+	version: string;
+	description?: string;
+	source: string;
+	[key: string]: unknown;
+}
+
+export interface MarketplaceManifest {
+	name: string;
+	metadata?: { version?: string };
+	plugins: MarketplacePluginEntry[];
+}
+
+// Computed staleness info for display
+export interface CachedPluginInfo {
+	key: string;
+	name: string;
+	marketplace: string;
+	installedVersion: string;
+	latestVersion: string | null;
+	installedSha: string;
+	remoteSha: string | null;
+	isVersionStale: boolean;
+	isShaStale: boolean;
+	orphanedVersions: string[];
+	installPath: string;
+}
 
 export interface ClaudeSettings {
 	enabledPlugins?: Record<string, boolean>;

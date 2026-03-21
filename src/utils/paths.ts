@@ -104,3 +104,32 @@ export function get_project_mcp_json_path(): string {
 export function get_global_mcp_json_path(): string {
 	return join(homedir(), '.mcp.json');
 }
+
+export function get_plugins_dir(): string {
+	return join(get_base_dir().baseDir, 'plugins');
+}
+
+export function get_installed_plugins_path(): string {
+	return join(get_plugins_dir(), 'installed_plugins.json');
+}
+
+export function get_known_marketplaces_path(): string {
+	return join(get_plugins_dir(), 'known_marketplaces.json');
+}
+
+export function get_plugin_cache_dir(): string {
+	return join(get_plugins_dir(), 'cache');
+}
+
+export function get_marketplaces_dir(): string {
+	return join(get_plugins_dir(), 'marketplaces');
+}
+
+export function get_marketplace_manifest_path(name: string): string {
+	return join(
+		get_marketplaces_dir(),
+		name,
+		'.claude-plugin',
+		'marketplace.json',
+	);
+}
