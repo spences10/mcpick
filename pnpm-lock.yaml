@@ -11,6 +11,9 @@ importers:
       '@clack/prompts':
         specifier: ^1.0.0
         version: 1.1.0
+      citty:
+        specifier: ^0.2.1
+        version: 0.2.1
       valibot:
         specifier: ^1.2.0
         version: 1.2.0(typescript@5.9.3)
@@ -156,6 +159,9 @@ packages:
 
   chardet@2.1.1:
     resolution: {integrity: sha512-PsezH1rqdV9VvyNhxxOW32/d75r01NY7TQCmOqomRo15ZSOKbpTFVsfjghxo6JloQUCGnH4k1LGu0R4yCLlWQQ==}
+
+  citty@0.2.1:
+    resolution: {integrity: sha512-kEV95lFBhQgtogAPlQfJJ0WGVSokvLr/UEoFPiKKOXF7pl98HfUVUD0ejsuTCld/9xH9vogSywZ5KqHzXrZpqg==}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -652,6 +658,8 @@ snapshots:
       fill-range: 7.1.1
 
   chardet@2.1.1: {}
+
+  citty@0.2.1: {}
 
   cross-spawn@7.0.6:
     dependencies:

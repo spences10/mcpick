@@ -280,7 +280,24 @@ async function main(): Promise<void> {
 	}
 }
 
-main().catch((error) => {
-	console.error('Fatal error:', error);
-	process.exit(1);
-});
+const SUBCOMMANDS = new Set([
+	'list',
+	'enable',
+	'disable',
+	'remove',
+	'add',
+	'backup',
+	'restore',
+	'profile',
+	'plugins',
+]);
+
+const arg = process.argv[2];
+if ((arg && SUBCOMMANDS.has(arg)) || arg === '--help' || arg === '-h') {
+	import('./cli/index.js').then((m) => m.run());
+} else {
+	main().catch((error) => {
+		console.error('Fatal error:', error);
+		process.exit(1);
+	});
+}

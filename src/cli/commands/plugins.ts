@@ -1,0 +1,115 @@
+import { defineCommand } from 'citty';
+import {
+	build_enabled_plugins,
+	get_all_plugins,
+	read_claude_settings,
+	write_claude_settings,
+} from '../../core/settings.js';
+import { error, output } from '../output.js';
+
+const list = defineCommand({
+	meta: {
+		name: 'list',
+		description: 'List all plugins and their status',
+	},
+	args: {
+		json: {
+			type: 'boolean',
+			description: 'Output as JSON',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		const settings = await read_claude_settings();
+		const plugins = get_all_plugins(settings);
+
+		if (args.json) {
+			output(plugins, true);
+		} else {
+			if (plugins.length === 0) {
+				console.log('No plugins found.');
+				return;
+			}
+			for (const p of plugins) {
+				const status = p.enabled ? 'on' : 'off';
+				console.log(`${p.name}@${p.marketplace}  ${status}`);
+			}
+		}
+	},
+});
+
+const enable = defineCommand({
+	meta: {
+		name: 'enable',
+		description: 'Enable a plugin',
+	},
+	args: {
+		plugin: {
+			type: 'positional',
+			description: 'Plugin key (name@marketplace)',
+			required: true,
+		},
+	},
+	async run({ args }) {
+		const settings = await read_claude_settings();
+		const plugins = get_all_plugins(settings);
+		const key = args.plugin;
+
+		const plugin = plugins.find(
+			(p) => `${p.name}@${p.marketplace}` === key,
+		);
+		if (!plugin) {
+			error(
+				`Plugin '${key}' not found. Run 'mcpick plugins list' to see available plugins.`,
+			);
+		}
+
+		plugin.enabled = true;
+		const updated = build_enabled_plugins(plugins);
+		await write_claude_settings({ enabledPlugins: updated });
+
+		console.log(`Enabled plugin '${key}'`);
+	},
+});
+
+const disable = defineCommand({
+	meta: {
+		name: 'disable',
+		description: 'Disable a plugin',
+	},
+	args: {
+		plugin: {
+			type: 'positional',
+			description: 'Plugin key (name@marketplace)',
+			required: true,
+		},
+	},
+	async run({ args }) {
+		const settings = await read_claude_settings();
+		const plugins = get_all_plugins(settings);
+		const key = args.plugin;
+
+		const plugin = plugins.find(
+			(p) => `${p.name}@${p.marketplace}` === key,
+		);
+		if (!plugin) {
+			error(
+				`Plugin '${key}' not found. Run 'mcpick plugins list' to see available plugins.`,
+			);
+		}
+
+		plugin.enabled = false;
+		const updated = build_enabled_plugins(plugins);
+		await write_claude_settings({ enabledPlugins: updated });
+
+		console.log(`Disabled plugin '${key}'`);
+	},
+});
+
+export default defineCommand({
+	meta: {
+		name: 'plugins',
+		description: 'Manage Claude Code plugins',
+	},
+	subCommands: { list, enable, disable },
+});
