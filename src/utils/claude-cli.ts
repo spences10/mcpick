@@ -76,9 +76,15 @@ function build_add_command(
 			}
 		}
 	} else {
-		// HTTP or SSE transport
+		// HTTP or SSE transport — URL must come before header flags
 		if ('url' in server && server.url) {
 			parts.push(shell_escape(server.url));
+		}
+
+		if ('headers' in server && server.headers) {
+			for (const [key, value] of Object.entries(server.headers)) {
+				parts.push('-H', shell_escape(`${key}: ${value}`));
+			}
 		}
 	}
 

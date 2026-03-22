@@ -72,12 +72,33 @@ export async function get_all_available_servers(): Promise<
 	const config = await read_claude_config();
 	const config_servers = get_enabled_servers(config);
 
-	// Merge: registry is base, config servers fill in any missing
-	const known_names = new Set(registry.servers.map((s) => s.name));
+	// Merge: config is the live truth, so update registry entries with config data
+	const config_by_name = new Map(
+		config_servers.map((s) => [s.name, s]),
+	);
+	const known_names = new Set<string>();
+	let registry_updated = false;
+
+	for (let i = 0; i < registry.servers.length; i++) {
+		const name = registry.servers[i].name;
+		known_names.add(name);
+		const config_server = config_by_name.get(name);
+		if (config_server) {
+			registry.servers[i] = config_server;
+			registry_updated = true;
+		}
+	}
+
 	for (const server of config_servers) {
 		if (!known_names.has(server.name)) {
 			registry.servers.push(server);
+			registry_updated = true;
 		}
+	}
+
+	// Persist updated data back to registry so it survives disable/enable cycles
+	if (registry_updated) {
+		await write_server_registry(registry);
 	}
 
 	return registry.servers;

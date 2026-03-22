@@ -1,4 +1,5 @@
 import { defineCommand } from 'citty';
+import { get_all_available_servers } from '../../core/registry.js';
 import { McpScope } from '../../types.js';
 import { remove_mcp_via_cli } from '../../utils/claude-cli.js';
 import { error } from '../output.js';
@@ -25,6 +26,9 @@ export default defineCommand({
 		if (!['local', 'project', 'user'].includes(scope)) {
 			error(`Invalid scope: ${scope}. Use local, project, or user.`);
 		}
+
+		// Sync config→registry before removing so headers/env are preserved
+		await get_all_available_servers();
 
 		const result = await remove_mcp_via_cli(args.server);
 		if (!result.success) {
