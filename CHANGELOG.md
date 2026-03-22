@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.13
+
+### Patch Changes
+
+- c985c28: Headers lost on disable/enable: pass -H flags in CLI, sync
+  config→registry before disable
+
 ## 0.0.12
 
 ### Patch Changes
