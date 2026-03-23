@@ -1,5 +1,11 @@
 # mcpick
 
+## 0.0.14
+
+### Patch Changes
+
+- 0170ea0: Add local dev workflow: mcpick dev + cache link/unlink
+
 ## 0.0.13
 
 ### Patch Changes
