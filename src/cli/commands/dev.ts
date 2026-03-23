@@ -11,8 +11,7 @@ import { error, output } from '../output.js';
 const apply = defineCommand({
 	meta: {
 		name: 'apply',
-		description:
-			'Override an MCP server with a local dev command',
+		description: 'Override an MCP server with a local dev command',
 	},
 	args: {
 		name: {
@@ -43,14 +42,10 @@ const apply = defineCommand({
 	async run({ args }) {
 		const scope = args.scope as McpScope | undefined;
 		if (scope && !['local', 'project', 'user'].includes(scope)) {
-			error(
-				`Invalid scope: ${scope}. Use local, project, or user.`,
-			);
+			error(`Invalid scope: ${scope}. Use local, project, or user.`);
 		}
 
-		const cmd_args = args.args
-			? args.args.split(',')
-			: [];
+		const cmd_args = args.args ? args.args.split(',') : [];
 
 		const result = await apply_dev_override(
 			args.name,
@@ -65,7 +60,9 @@ const apply = defineCommand({
 			console.log(
 				`Dev override applied for '${args.name}' (scope: ${result.scope})`,
 			);
-			console.log(`  command: ${args.command}${cmd_args.length > 0 ? ` ${cmd_args.join(' ')}` : ''}`);
+			console.log(
+				`  command: ${args.command}${cmd_args.length > 0 ? ` ${cmd_args.join(' ')}` : ''}`,
+			);
 			console.log(
 				'\nRestart Claude Code or run /reload-plugins to pick up changes.',
 			);
@@ -105,7 +102,10 @@ const restore = defineCommand({
 			if (args.json) {
 				output(result, true);
 			} else {
-				if (result.restored.length === 0 && result.errors.length === 0) {
+				if (
+					result.restored.length === 0 &&
+					result.errors.length === 0
+				) {
 					console.log('No dev overrides to restore.');
 				} else {
 					for (const name of result.restored) {
