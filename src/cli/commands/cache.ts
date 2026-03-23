@@ -3,8 +3,11 @@ import {
 	clean_orphaned_versions,
 	clear_plugin_caches,
 	get_cached_plugins_info,
+	link_local_plugin,
+	list_linked_plugins,
 	read_installed_plugins,
 	refresh_all_marketplaces,
+	unlink_local_plugin,
 } from '../../core/plugin-cache.js';
 import { error, output } from '../output.js';
 
@@ -195,6 +198,127 @@ const refresh = defineCommand({
 	},
 });
 
+const link = defineCommand({
+	meta: {
+		name: 'link',
+		description:
+			'Symlink a local directory into the plugin cache for dev',
+	},
+	args: {
+		path: {
+			type: 'positional',
+			description: 'Local path to the plugin/marketplace directory',
+			required: true,
+		},
+		as: {
+			type: 'string',
+			description:
+				'Plugin key (name@marketplace) for the cache entry',
+			required: true,
+		},
+		json: {
+			type: 'boolean',
+			description: 'Output as JSON',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		if (!args.as) {
+			error(
+				'--as is required. Specify plugin key as name@marketplace.',
+			);
+		}
+
+		if (!args.as.includes('@')) {
+			error(
+				'Plugin key must be in name@marketplace format (e.g. my-plugin@my-marketplace)',
+			);
+		}
+
+		const result = await link_local_plugin(args.path, args.as);
+
+		if (args.json) {
+			output(result, true);
+		} else if (result.success) {
+			console.log(`Linked: ${result.key}`);
+			console.log(`  ${result.symlinkPath} → ${result.targetPath}`);
+			console.log(
+				'\nRun /reload-plugins in Claude Code or restart your session.',
+			);
+		} else {
+			error(result.error || 'Unknown error');
+		}
+	},
+});
+
+const unlink = defineCommand({
+	meta: {
+		name: 'unlink',
+		description: 'Remove a symlink from the plugin cache',
+	},
+	args: {
+		key: {
+			type: 'positional',
+			description: 'Plugin key (name@marketplace)',
+			required: true,
+		},
+		json: {
+			type: 'boolean',
+			description: 'Output as JSON',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		const result = await unlink_local_plugin(args.key);
+
+		if (args.json) {
+			output(result, true);
+		} else if (result.success) {
+			console.log(`Unlinked: ${args.key}`);
+			if (result.restored) {
+				console.log('  Original cache directory restored from backup.');
+			}
+			console.log(
+				'\nRun /reload-plugins in Claude Code or restart your session.',
+			);
+		} else {
+			error(result.error || 'Unknown error');
+		}
+	},
+});
+
+const links = defineCommand({
+	meta: {
+		name: 'links',
+		description: 'List all symlinked plugin cache entries',
+	},
+	args: {
+		json: {
+			type: 'boolean',
+			description: 'Output as JSON',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		const linked = await list_linked_plugins();
+
+		if (args.json) {
+			output(linked, true);
+			return;
+		}
+
+		if (linked.length === 0) {
+			console.log('No linked plugins.');
+			return;
+		}
+
+		for (const l of linked) {
+			console.log(`${l.key}`);
+			console.log(`  ${l.symlinkPath} → ${l.targetPath}`);
+		}
+	},
+});
+
 export default defineCommand({
 	meta: {
 		name: 'cache',
@@ -205,5 +329,8 @@ export default defineCommand({
 		clear,
 		'clean-orphaned': clean_orphaned,
 		refresh,
+		link,
+		unlink,
+		links,
 	},
 });

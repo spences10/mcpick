@@ -331,6 +331,7 @@ const SUBCOMMANDS = new Set([
 	'profile',
 	'plugins',
 	'cache',
+	'dev',
 ]);
 
 const arg = process.argv[2];
