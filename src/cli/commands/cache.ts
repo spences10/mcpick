@@ -287,7 +287,9 @@ const unlink = defineCommand({
 		} else if (result.success) {
 			console.log(`Unlinked: ${args.key}`);
 			if (result.restored) {
-				console.log('  Original cache directory restored from backup.');
+				console.log(
+					'  Original cache directory restored from backup.',
+				);
 			}
 			console.log(
 				'\nRun /reload-plugins in Claude Code or restart your session.',

@@ -1,5 +1,13 @@
 import { exec } from 'node:child_process';
-import { lstat, readdir, readFile, readlink, rename, rm, symlink } from 'node:fs/promises';
+import {
+	lstat,
+	readdir,
+	readFile,
+	readlink,
+	rename,
+	rm,
+	symlink,
+} from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type {
@@ -108,10 +116,9 @@ async function recover_deleted_branch(
 	const q = JSON.stringify(dir);
 	try {
 		// Reset narrow refspec to fetch all branches
-		await execAsync(
-			`git -C ${q} remote set-branches origin '*'`,
-			{ timeout: 10_000 },
-		);
+		await execAsync(`git -C ${q} remote set-branches origin '*'`, {
+			timeout: 10_000,
+		});
 		await execAsync(`git -C ${q} fetch origin`, {
 			timeout: 30_000,
 		});
@@ -123,7 +130,9 @@ async function recover_deleted_branch(
 				`git -C ${q} symbolic-ref refs/remotes/origin/HEAD`,
 				{ timeout: 5_000 },
 			);
-			const match = stdout.trim().match(/refs\/remotes\/origin\/(.+)/);
+			const match = stdout
+				.trim()
+				.match(/refs\/remotes\/origin\/(.+)/);
 			if (match) default_branch = match[1];
 		} catch {
 			// symbolic-ref not set — try main, then master
@@ -148,8 +157,7 @@ async function recover_deleted_branch(
 
 		return { recovered: true };
 	} catch (err) {
-		const msg =
-			err instanceof Error ? err.message : 'Unknown error';
+		const msg = err instanceof Error ? err.message : 'Unknown error';
 		return { recovered: false, error: msg };
 	}
 }
@@ -313,15 +321,20 @@ export async function scan_all_cache_keys(): Promise<string[]> {
 	const keys: string[] = [];
 
 	try {
-		const marketplaces = await readdir(cache_dir, { withFileTypes: true });
+		const marketplaces = await readdir(cache_dir, {
+			withFileTypes: true,
+		});
 		for (const mkt of marketplaces) {
 			if (!mkt.isDirectory() && !mkt.isSymbolicLink()) continue;
 			const mkt_path = join(cache_dir, mkt.name);
 
 			try {
-				const plugins = await readdir(mkt_path, { withFileTypes: true });
+				const plugins = await readdir(mkt_path, {
+					withFileTypes: true,
+				});
 				for (const plugin of plugins) {
-					if (!plugin.isDirectory() && !plugin.isSymbolicLink()) continue;
+					if (!plugin.isDirectory() && !plugin.isSymbolicLink())
+						continue;
 					keys.push(`${plugin.name}@${mkt.name}`);
 				}
 			} catch {
@@ -584,12 +597,16 @@ export async function unlink_local_plugin(
 /**
  * List all symlinked entries in the plugin cache.
  */
-export async function list_linked_plugins(): Promise<LinkedPluginInfo[]> {
+export async function list_linked_plugins(): Promise<
+	LinkedPluginInfo[]
+> {
 	const cache_dir = get_plugin_cache_dir();
 	const links: LinkedPluginInfo[] = [];
 
 	try {
-		const marketplaces = await readdir(cache_dir, { withFileTypes: true });
+		const marketplaces = await readdir(cache_dir, {
+			withFileTypes: true,
+		});
 		for (const mkt of marketplaces) {
 			if (!mkt.isDirectory() && !mkt.isSymbolicLink()) continue;
 			const mkt_path = join(cache_dir, mkt.name);

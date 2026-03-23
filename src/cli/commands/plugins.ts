@@ -182,7 +182,8 @@ const uninstall = defineCommand({
 		const { marketplace } = parse_plugin_key(args.plugin);
 		const known = await read_known_marketplaces();
 		if (known[marketplace]) {
-			const msg = `'${args.plugin}' is managed by marketplace '${marketplace}'.\n` +
+			const msg =
+				`'${args.plugin}' is managed by marketplace '${marketplace}'.\n` +
 				`To remove the marketplace: mcpick marketplace remove ${marketplace}\n` +
 				`Or via Claude CLI: claude plugin marketplace remove ${marketplace}`;
 			if (args.json) {

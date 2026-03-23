@@ -20,10 +20,7 @@ const EMPTY_OVERRIDES: DevOverridesFile = {
 
 export async function read_dev_overrides(): Promise<DevOverridesFile> {
 	try {
-		const content = await readFile(
-			get_dev_overrides_path(),
-			'utf-8',
-		);
+		const content = await readFile(get_dev_overrides_path(), 'utf-8');
 		return JSON.parse(content) as DevOverridesFile;
 	} catch {
 		return { ...EMPTY_OVERRIDES, overrides: {} };
@@ -60,8 +57,7 @@ async function find_server_in_scope(
 			} else {
 				// local scope: projects[cwd].mcpServers
 				const cwd = get_current_project_path();
-				const server =
-					parsed.projects?.[cwd]?.mcpServers?.[name];
+				const server = parsed.projects?.[cwd]?.mcpServers?.[name];
 				if (server) return { server, scope: 'local' };
 			}
 		} catch {
@@ -106,41 +102,33 @@ async function write_server_to_scope(
 	scope: McpScope,
 ): Promise<void> {
 	if (scope === 'user') {
-		await atomic_json_write(
-			get_claude_config_path(),
-			(existing) => {
-				if (!existing.mcpServers) {
-					existing.mcpServers = {};
-				}
-				(existing.mcpServers as Record<string, unknown>)[name] =
-					server;
-				return existing;
-			},
-		);
+		await atomic_json_write(get_claude_config_path(), (existing) => {
+			if (!existing.mcpServers) {
+				existing.mcpServers = {};
+			}
+			(existing.mcpServers as Record<string, unknown>)[name] = server;
+			return existing;
+		});
 	} else if (scope === 'local') {
 		const cwd = get_current_project_path();
-		await atomic_json_write(
-			get_claude_config_path(),
-			(existing) => {
-				if (!existing.projects) {
-					existing.projects = {};
-				}
-				const projects = existing.projects as Record<
-					string,
-					Record<string, unknown>
-				>;
-				if (!projects[cwd]) {
-					projects[cwd] = {};
-				}
-				if (!projects[cwd].mcpServers) {
-					projects[cwd].mcpServers = {};
-				}
-				(
-					projects[cwd].mcpServers as Record<string, unknown>
-				)[name] = server;
-				return existing;
-			},
-		);
+		await atomic_json_write(get_claude_config_path(), (existing) => {
+			if (!existing.projects) {
+				existing.projects = {};
+			}
+			const projects = existing.projects as Record<
+				string,
+				Record<string, unknown>
+			>;
+			if (!projects[cwd]) {
+				projects[cwd] = {};
+			}
+			if (!projects[cwd].mcpServers) {
+				projects[cwd].mcpServers = {};
+			}
+			(projects[cwd].mcpServers as Record<string, unknown>)[name] =
+				server;
+			return existing;
+		});
 	} else if (scope === 'project') {
 		await atomic_json_write(
 			get_project_mcp_json_path(),

@@ -66,15 +66,10 @@ const add = defineCommand({
 	async run({ args }) {
 		const scope = args.scope as 'user' | 'project' | 'local';
 		if (!['user', 'project', 'local'].includes(scope)) {
-			error(
-				`Invalid scope: ${scope}. Use user, project, or local.`,
-			);
+			error(`Invalid scope: ${scope}. Use user, project, or local.`);
 		}
 
-		const result = await marketplace_add_via_cli(
-			args.source,
-			scope,
-		);
+		const result = await marketplace_add_via_cli(args.source, scope);
 
 		if (args.json) {
 			output(
@@ -141,8 +136,7 @@ const update = defineCommand({
 	args: {
 		name: {
 			type: 'positional',
-			description:
-				'Marketplace name to update (omit to update all)',
+			description: 'Marketplace name to update (omit to update all)',
 			required: false,
 		},
 		json: {
