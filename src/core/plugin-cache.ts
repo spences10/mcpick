@@ -1,5 +1,5 @@
 import { exec } from 'node:child_process';
-import { readdir, readFile, rm } from 'node:fs/promises';
+import { lstat, readdir, readFile, readlink, rename, rm, symlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type {
@@ -7,10 +7,14 @@ import type {
 	InstalledPluginsFile,
 	KnownMarketplace,
 	KnownMarketplacesFile,
+	LinkedPluginInfo,
+	LinkResult,
 	MarketplaceManifest,
+	UnlinkResult,
 } from '../types.js';
 import { atomic_json_write } from '../utils/atomic-write.js';
 import {
+	ensure_directory_exists,
 	get_installed_plugins_path,
 	get_known_marketplaces_path,
 	get_marketplace_manifest_path,
@@ -157,7 +161,7 @@ async function find_orphaned_versions(
 
 // --- Staleness analysis ---
 
-function parse_plugin_key(key: string): {
+export function parse_plugin_key(key: string): {
 	name: string;
 	marketplace: string;
 } {
@@ -355,4 +359,173 @@ export async function clean_orphaned_versions(): Promise<{
 	}
 
 	return { cleaned: cleaned_paths.length, paths: cleaned_paths };
+}
+
+// --- Cache linking ---
+
+/**
+ * Symlink a local directory into the plugin cache.
+ * Backs up existing cache directory if present.
+ */
+export async function link_local_plugin(
+	local_path: string,
+	key: string,
+): Promise<LinkResult> {
+	const resolved_path = resolve(local_path);
+	const { name, marketplace } = parse_plugin_key(key);
+
+	// Validate local path exists
+	try {
+		const stat = await lstat(resolved_path);
+		if (!stat.isDirectory()) {
+			return {
+				success: false,
+				key,
+				symlinkPath: '',
+				targetPath: resolved_path,
+				error: `Path is not a directory: ${resolved_path}`,
+			};
+		}
+	} catch {
+		return {
+			success: false,
+			key,
+			symlinkPath: '',
+			targetPath: resolved_path,
+			error: `Path does not exist: ${resolved_path}`,
+		};
+	}
+
+	const cache_dir = get_plugin_cache_dir();
+	const plugin_dir = join(cache_dir, marketplace, name);
+
+	// Ensure parent directory exists
+	await ensure_directory_exists(join(cache_dir, marketplace));
+
+	// If plugin_dir exists and is not a symlink, back it up
+	try {
+		const stat = await lstat(plugin_dir);
+		if (stat.isSymbolicLink()) {
+			// Already a symlink — remove it
+			await rm(plugin_dir);
+		} else if (stat.isDirectory()) {
+			// Back up existing directory
+			const backup_path = `${plugin_dir}.backup`;
+			await rename(plugin_dir, backup_path);
+		}
+	} catch {
+		// Doesn't exist — fine
+	}
+
+	// Create symlink
+	try {
+		await symlink(resolved_path, plugin_dir, 'dir');
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : 'Unknown error';
+		return {
+			success: false,
+			key,
+			symlinkPath: plugin_dir,
+			targetPath: resolved_path,
+			error: `Failed to create symlink: ${msg}`,
+		};
+	}
+
+	return {
+		success: true,
+		key,
+		symlinkPath: plugin_dir,
+		targetPath: resolved_path,
+	};
+}
+
+/**
+ * Remove a symlink from the plugin cache and restore backup if present.
+ */
+export async function unlink_local_plugin(
+	key: string,
+): Promise<UnlinkResult> {
+	const { name, marketplace } = parse_plugin_key(key);
+	const cache_dir = get_plugin_cache_dir();
+	const plugin_dir = join(cache_dir, marketplace, name);
+
+	// Verify it's actually a symlink
+	try {
+		const stat = await lstat(plugin_dir);
+		if (!stat.isSymbolicLink()) {
+			return {
+				success: false,
+				key,
+				restored: false,
+				error: `'${key}' is not a symlink — nothing to unlink`,
+			};
+		}
+	} catch {
+		return {
+			success: false,
+			key,
+			restored: false,
+			error: `'${key}' not found in cache`,
+		};
+	}
+
+	// Remove symlink
+	await rm(plugin_dir);
+
+	// Restore backup if present
+	const backup_path = `${plugin_dir}.backup`;
+	let restored = false;
+	try {
+		await lstat(backup_path);
+		await rename(backup_path, plugin_dir);
+		restored = true;
+	} catch {
+		// No backup to restore
+	}
+
+	return { success: true, key, restored };
+}
+
+/**
+ * List all symlinked entries in the plugin cache.
+ */
+export async function list_linked_plugins(): Promise<LinkedPluginInfo[]> {
+	const cache_dir = get_plugin_cache_dir();
+	const links: LinkedPluginInfo[] = [];
+
+	try {
+		const marketplaces = await readdir(cache_dir, { withFileTypes: true });
+		for (const mkt of marketplaces) {
+			if (!mkt.isDirectory() && !mkt.isSymbolicLink()) continue;
+			const mkt_path = join(cache_dir, mkt.name);
+
+			let entries;
+			try {
+				entries = await readdir(mkt_path, { withFileTypes: true });
+			} catch {
+				continue;
+			}
+
+			for (const entry of entries) {
+				const entry_path = join(mkt_path, entry.name);
+				try {
+					const stat = await lstat(entry_path);
+					if (stat.isSymbolicLink()) {
+						const target = await readlink(entry_path);
+						links.push({
+							key: `${entry.name}@${mkt.name}`,
+							symlinkPath: entry_path,
+							targetPath: resolve(join(cache_dir, mkt.name), target),
+						});
+					}
+				} catch {
+					// Skip on error
+				}
+			}
+		}
+	} catch {
+		// Cache dir doesn't exist
+	}
+
+	return links;
 }

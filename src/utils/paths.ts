@@ -44,6 +44,10 @@ export function get_mcpick_dir(): string {
 	return join(get_base_dir().baseDir, 'mcpick');
 }
 
+export function get_dev_overrides_path(): string {
+	return join(get_mcpick_dir(), 'dev-overrides.json');
+}
+
 export function get_server_registry_path(): string {
 	return join(get_mcpick_dir(), 'servers.json');
 }

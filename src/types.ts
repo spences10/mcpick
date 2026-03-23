@@ -108,3 +108,38 @@ export interface ClaudeSettings {
 // - project: Shared via .mcp.json in project root
 // - user: Global in ~/.claude.json for all projects
 export type McpScope = 'local' | 'project' | 'user';
+
+// Dev override types (issue #33)
+export interface DevOverrideEntry {
+	original: McpServerBase;
+	dev: McpServerBase;
+	scope: McpScope;
+	createdAt: string;
+}
+
+export interface DevOverridesFile {
+	version: number;
+	overrides: Record<string, DevOverrideEntry>;
+}
+
+// Cache link types (issue #32)
+export interface LinkResult {
+	success: boolean;
+	key: string;
+	symlinkPath: string;
+	targetPath: string;
+	error?: string;
+}
+
+export interface UnlinkResult {
+	success: boolean;
+	key: string;
+	restored: boolean;
+	error?: string;
+}
+
+export interface LinkedPluginInfo {
+	key: string;
+	symlinkPath: string;
+	targetPath: string;
+}

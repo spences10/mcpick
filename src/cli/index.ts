@@ -23,6 +23,7 @@ const main = defineCommand({
 		plugins: () =>
 			import('./commands/plugins.js').then((m) => m.default),
 		cache: () => import('./commands/cache.js').then((m) => m.default),
+		dev: () => import('./commands/dev.js').then((m) => m.default),
 	},
 });
 
