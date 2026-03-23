@@ -1,5 +1,9 @@
 import { defineCommand } from 'citty';
 import {
+	parse_plugin_key,
+	read_known_marketplaces,
+} from '../../core/plugin-cache.js';
+import {
 	build_enabled_plugins,
 	get_all_plugins,
 	read_claude_settings,
@@ -173,6 +177,29 @@ const uninstall = defineCommand({
 	},
 	async run({ args }) {
 		const scope = args.scope as 'user' | 'project' | 'local';
+
+		// Check if this is a marketplace-managed plugin
+		const { marketplace } = parse_plugin_key(args.plugin);
+		const known = await read_known_marketplaces();
+		if (known[marketplace]) {
+			const msg = `'${args.plugin}' is managed by marketplace '${marketplace}'.\n` +
+				`To remove the marketplace: mcpick marketplace remove ${marketplace}\n` +
+				`Or via Claude CLI: claude plugin marketplace remove ${marketplace}`;
+			if (args.json) {
+				output(
+					{
+						success: false,
+						error: msg,
+						marketplace_managed: true,
+					},
+					true,
+				);
+			} else {
+				error(msg);
+			}
+			return;
+		}
+
 		const result = await uninstall_plugin_via_cli(args.plugin, scope);
 
 		if (args.json) {

@@ -24,6 +24,10 @@ const main = defineCommand({
 			import('./commands/plugins.js').then((m) => m.default),
 		cache: () => import('./commands/cache.js').then((m) => m.default),
 		dev: () => import('./commands/dev.js').then((m) => m.default),
+		marketplace: () =>
+			import('./commands/marketplace.js').then((m) => m.default),
+		reload: () =>
+			import('./commands/reload.js').then((m) => m.default),
 	},
 });
 

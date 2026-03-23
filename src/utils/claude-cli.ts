@@ -240,6 +240,128 @@ export async function update_plugin_via_cli(
 	}
 }
 
+// --- Marketplace operations ---
+
+export interface CliResultWithOutput extends CliResult {
+	stdout?: string;
+}
+
+/**
+ * Add a marketplace via Claude CLI
+ */
+export async function marketplace_add_via_cli(
+	source: string,
+	scope: 'user' | 'project' | 'local' = 'user',
+): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		await execAsync(
+			`claude plugin marketplace add ${shell_escape(source)} --scope ${scope}`,
+		);
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to add marketplace: ${message}`,
+		};
+	}
+}
+
+/**
+ * Remove a marketplace via Claude CLI
+ */
+export async function marketplace_remove_via_cli(
+	name: string,
+): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		await execAsync(
+			`claude plugin marketplace remove ${shell_escape(name)}`,
+		);
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to remove marketplace: ${message}`,
+		};
+	}
+}
+
+/**
+ * Update marketplace(s) via Claude CLI
+ */
+export async function marketplace_update_via_cli(
+	name?: string,
+): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		const cmd = name
+			? `claude plugin marketplace update ${shell_escape(name)}`
+			: 'claude plugin marketplace update';
+		await execAsync(cmd);
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to update marketplace: ${message}`,
+		};
+	}
+}
+
+/**
+ * List marketplaces via Claude CLI
+ */
+export async function marketplace_list_via_cli(): Promise<CliResultWithOutput> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		const { stdout } = await execAsync(
+			'claude plugin marketplace list',
+		);
+		return { success: true, stdout: stdout.trim() };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to list marketplaces: ${message}`,
+		};
+	}
+}
+
 /**
  * Get the scope description for display
  */

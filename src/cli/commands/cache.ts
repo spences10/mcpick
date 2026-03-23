@@ -7,6 +7,7 @@ import {
 	list_linked_plugins,
 	read_installed_plugins,
 	refresh_all_marketplaces,
+	scan_all_cache_keys,
 	unlink_local_plugin,
 } from '../../core/plugin-cache.js';
 import { error, output } from '../output.js';
@@ -86,7 +87,14 @@ const clear = defineCommand({
 	},
 	async run({ args }) {
 		const installed = await read_installed_plugins();
-		const all_keys = Object.keys(installed.plugins);
+		const installed_keys = Object.keys(installed.plugins);
+
+		// When --all, also scan disk for marketplace-sourced caches
+		// not tracked in installed_plugins.json
+		const scanned_keys = args.all ? await scan_all_cache_keys() : [];
+		const all_keys = [
+			...new Set([...installed_keys, ...scanned_keys]),
+		];
 
 		if (all_keys.length === 0) {
 			if (args.json) {
@@ -100,7 +108,10 @@ const clear = defineCommand({
 		let keys_to_clear: string[];
 
 		if (args.plugin) {
-			if (!installed.plugins[args.plugin]) {
+			if (
+				!installed.plugins[args.plugin] &&
+				!scanned_keys.includes(args.plugin)
+			) {
 				error(
 					`Plugin '${args.plugin}' not found in cache. Run 'mcpick cache status' to see cached plugins.`,
 				);

@@ -332,6 +332,8 @@ const SUBCOMMANDS = new Set([
 	'plugins',
 	'cache',
 	'dev',
+	'marketplace',
+	'reload',
 ]);
 
 const arg = process.argv[2];

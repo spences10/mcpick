@@ -98,6 +98,62 @@ export interface RefreshResult {
 	error?: string;
 }
 
+/**
+ * Recover a marketplace clone stuck on a deleted branch.
+ * Resets the fetch refspec, fetches all branches, and checks out the default branch.
+ */
+async function recover_deleted_branch(
+	dir: string,
+): Promise<{ recovered: boolean; error?: string }> {
+	const q = JSON.stringify(dir);
+	try {
+		// Reset narrow refspec to fetch all branches
+		await execAsync(
+			`git -C ${q} remote set-branches origin '*'`,
+			{ timeout: 10_000 },
+		);
+		await execAsync(`git -C ${q} fetch origin`, {
+			timeout: 30_000,
+		});
+
+		// Detect default branch
+		let default_branch = 'main';
+		try {
+			const { stdout } = await execAsync(
+				`git -C ${q} symbolic-ref refs/remotes/origin/HEAD`,
+				{ timeout: 5_000 },
+			);
+			const match = stdout.trim().match(/refs\/remotes\/origin\/(.+)/);
+			if (match) default_branch = match[1];
+		} catch {
+			// symbolic-ref not set — try main, then master
+			try {
+				await execAsync(
+					`git -C ${q} rev-parse --verify origin/main`,
+					{ timeout: 5_000 },
+				);
+				default_branch = 'main';
+			} catch {
+				default_branch = 'master';
+			}
+		}
+
+		await execAsync(`git -C ${q} checkout ${default_branch}`, {
+			timeout: 10_000,
+		});
+		await execAsync(
+			`git -C ${q} reset --hard origin/${default_branch}`,
+			{ timeout: 10_000 },
+		);
+
+		return { recovered: true };
+	} catch (err) {
+		const msg =
+			err instanceof Error ? err.message : 'Unknown error';
+		return { recovered: false, error: msg };
+	}
+}
+
 export async function refresh_marketplace(
 	name: string,
 	marketplace: KnownMarketplace,
@@ -108,10 +164,16 @@ export async function refresh_marketplace(
 			timeout: 30_000,
 		});
 		return { success: true };
-	} catch (err) {
-		const message =
-			err instanceof Error ? err.message : 'Unknown error';
-		return { success: false, error: `${name}: ${message}` };
+	} catch {
+		// Fast-forward failed — attempt recovery from deleted branch
+		const recovery = await recover_deleted_branch(dir);
+		if (recovery.recovered) {
+			return { success: true };
+		}
+		return {
+			success: false,
+			error: `${name}: recovery failed: ${recovery.error}`,
+		};
 	}
 }
 
@@ -238,6 +300,39 @@ export async function get_cached_plugins_info(): Promise<
 	}
 
 	return results;
+}
+
+// --- Cache scanning ---
+
+/**
+ * Scan the cache directory on disk to find all plugin keys,
+ * including marketplace-sourced plugins not tracked in installed_plugins.json.
+ */
+export async function scan_all_cache_keys(): Promise<string[]> {
+	const cache_dir = get_plugin_cache_dir();
+	const keys: string[] = [];
+
+	try {
+		const marketplaces = await readdir(cache_dir, { withFileTypes: true });
+		for (const mkt of marketplaces) {
+			if (!mkt.isDirectory() && !mkt.isSymbolicLink()) continue;
+			const mkt_path = join(cache_dir, mkt.name);
+
+			try {
+				const plugins = await readdir(mkt_path, { withFileTypes: true });
+				for (const plugin of plugins) {
+					if (!plugin.isDirectory() && !plugin.isSymbolicLink()) continue;
+					keys.push(`${plugin.name}@${mkt.name}`);
+				}
+			} catch {
+				// Skip unreadable marketplace dirs
+			}
+		}
+	} catch {
+		// Cache dir doesn't exist
+	}
+
+	return keys;
 }
 
 // --- Cache clearing ---
