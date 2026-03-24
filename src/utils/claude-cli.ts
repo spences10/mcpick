@@ -320,8 +320,11 @@ export async function marketplace_add_via_cli(
 	}
 
 	// Validate GitHub repo exists before attempting clone
+	// Only validate shorthand (owner/repo) — explicit URLs imply the user knows the repo
 	const gh = parse_github_repo(source);
-	if (gh) {
+	const is_shorthand =
+		gh && !source.startsWith('http') && !source.startsWith('git@');
+	if (gh && is_shorthand) {
 		const validation_error = await validate_github_repo(
 			gh.owner,
 			gh.repo,
@@ -464,6 +467,120 @@ export function get_scope_description(scope: McpScope): string {
 			return 'Shared via .mcp.json (version controlled)';
 		case 'user':
 			return 'Global - all projects';
+	}
+}
+
+/**
+ * Validate a plugin or marketplace manifest via Claude CLI
+ */
+export async function validate_plugin_via_cli(
+	path: string,
+): Promise<CliResultWithOutput> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		const { stdout } = await execAsync(
+			`claude plugin validate ${shell_escape(path)}`,
+		);
+		return { success: true, stdout: stdout.trim() };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Validation failed: ${message}`,
+		};
+	}
+}
+
+/**
+ * Get details about an MCP server via Claude CLI
+ */
+export async function mcp_get_via_cli(
+	name: string,
+): Promise<CliResultWithOutput> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		const { stdout } = await execAsync(
+			`claude mcp get ${shell_escape(name)}`,
+		);
+		return { success: true, stdout: stdout.trim() };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to get server details: ${message}`,
+		};
+	}
+}
+
+/**
+ * Add an MCP server from raw JSON via Claude CLI
+ */
+export async function mcp_add_json_via_cli(
+	name: string,
+	json: string,
+	scope: McpScope = 'local',
+): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		await execAsync(
+			`claude mcp add-json ${shell_escape(name)} ${shell_escape(json)} --scope ${scope}`,
+		);
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to add server from JSON: ${message}`,
+		};
+	}
+}
+
+/**
+ * Reset project-scoped MCP server choices via Claude CLI
+ */
+export async function mcp_reset_project_choices_via_cli(): Promise<CliResult> {
+	const cli_available = await check_claude_cli();
+	if (!cli_available) {
+		return {
+			success: false,
+			error: 'Claude CLI not found. Please install Claude Code CLI.',
+		};
+	}
+
+	try {
+		await execAsync('claude mcp reset-project-choices');
+		return { success: true };
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		return {
+			success: false,
+			error: `Failed to reset project choices: ${message}`,
+		};
 	}
 }
 

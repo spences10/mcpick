@@ -1,4 +1,5 @@
 import { defineCommand } from 'citty';
+import { read_marketplace_manifest } from '../../core/plugin-cache.js';
 import {
 	marketplace_add_via_cli,
 	marketplace_list_via_cli,
@@ -43,7 +44,8 @@ const list = defineCommand({
 const add = defineCommand({
 	meta: {
 		name: 'add',
-		description: 'Add a marketplace from URL, path, or GitHub repo',
+		description:
+			'Add a plugin marketplace (a catalog of installable plugins)',
 	},
 	args: {
 		source: {
@@ -62,21 +64,86 @@ const add = defineCommand({
 		const result = await marketplace_add_via_cli(args.source);
 
 		if (args.json) {
+			// Try to include available plugins in JSON output
+			let available_plugins: string[] = [];
+			if (result.success) {
+				const manifests =
+					await find_marketplace_plugins(args.source);
+				available_plugins = manifests;
+			}
 			output(
 				{
 					added: args.source,
 					success: result.success,
 					error: result.error,
+					available_plugins,
 				},
 				true,
 			);
 		} else if (result.success) {
 			console.log(`Marketplace added: ${args.source}`);
+			await show_available_plugins(args.source);
 		} else {
 			error(result.error || 'Unknown error');
 		}
 	},
 });
+
+/**
+ * Try to find and display available plugins from a newly added marketplace.
+ * The marketplace name in the filesystem may differ from the source string,
+ * so we try common derivations.
+ */
+async function find_marketplace_plugins(
+	source: string,
+): Promise<string[]> {
+	// Try the source as-is, then extract repo name from various formats
+	const candidates: string[] = [];
+
+	// Extract repo name from owner/repo, URLs, etc.
+	const repo_match = source.match(/([^/]+?)(?:\.git)?$/);
+	if (repo_match) {
+		candidates.push(repo_match[1].toLowerCase());
+		candidates.push(repo_match[1]);
+	}
+
+	// Try the full source as a name
+	candidates.push(source);
+
+	for (const name of candidates) {
+		const manifest = await read_marketplace_manifest(name);
+		if (manifest?.plugins?.length) {
+			return manifest.plugins.map((p) => {
+				const desc = p.description
+					? ` - ${p.description}`
+					: '';
+				return `${p.name}${desc}`;
+			});
+		}
+	}
+
+	return [];
+}
+
+async function show_available_plugins(source: string): Promise<void> {
+	const plugins = await find_marketplace_plugins(source);
+
+	if (plugins.length > 0) {
+		console.log(
+			`\nAvailable plugins (${plugins.length}):`,
+		);
+		for (const p of plugins) {
+			console.log(`  - ${p}`);
+		}
+		console.log(
+			'\nInstall with: mcpick plugins install <name>@<marketplace>',
+		);
+	} else {
+		console.log(
+			'\nTo browse and install plugins: mcpick plugins install <name>@<marketplace>',
+		);
+	}
+}
 
 const remove = defineCommand({
 	meta: {
@@ -161,7 +228,8 @@ const update = defineCommand({
 export default defineCommand({
 	meta: {
 		name: 'marketplace',
-		description: 'Manage Claude Code plugin marketplaces',
+		description:
+			'Manage plugin marketplaces (catalogs of installable plugins). Add a marketplace first, then install plugins from it with: mcpick plugins install <name>@<marketplace>',
 	},
 	subCommands: {
 		list,

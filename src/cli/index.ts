@@ -14,6 +14,13 @@ const main = defineCommand({
 		remove: () =>
 			import('./commands/remove.js').then((m) => m.default),
 		add: () => import('./commands/add.js').then((m) => m.default),
+		'add-json': () =>
+			import('./commands/add-json.js').then((m) => m.default),
+		get: () => import('./commands/get.js').then((m) => m.default),
+		'reset-project-choices': () =>
+			import('./commands/reset-project-choices.js').then(
+				(m) => m.default,
+			),
 		backup: () =>
 			import('./commands/backup.js').then((m) => m.default),
 		restore: () =>

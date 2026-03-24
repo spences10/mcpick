@@ -14,6 +14,7 @@ import { backup_config } from './commands/backup.js';
 import { edit_config } from './commands/edit-config.js';
 import { edit_plugins } from './commands/edit-plugins.js';
 import { manage_cache } from './commands/manage-cache.js';
+import { manage_marketplace } from './commands/manage-marketplace.js';
 import { restore_config } from './commands/restore.js';
 import { write_claude_config } from './core/config.js';
 import {
@@ -226,6 +227,11 @@ async function main(): Promise<void> {
 						hint: 'Toggle, install, uninstall, or update plugins',
 					},
 					{
+						value: 'manage-marketplace' as MenuAction,
+						label: 'Manage marketplaces',
+						hint: 'Add, remove, or update plugin marketplaces',
+					},
+					{
 						value: 'manage-cache' as MenuAction,
 						label: 'Manage plugin cache',
 						hint: 'View, clear, or refresh plugin caches',
@@ -274,6 +280,9 @@ async function main(): Promise<void> {
 					break;
 				case 'edit-plugins':
 					await edit_plugins();
+					break;
+				case 'manage-marketplace':
+					await manage_marketplace();
 					break;
 				case 'manage-cache':
 					await manage_cache();
@@ -326,6 +335,9 @@ const SUBCOMMANDS = new Set([
 	'disable',
 	'remove',
 	'add',
+	'add-json',
+	'get',
+	'reset-project-choices',
 	'backup',
 	'restore',
 	'profile',

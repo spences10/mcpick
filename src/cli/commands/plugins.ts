@@ -13,6 +13,7 @@ import {
 	install_plugin_via_cli,
 	uninstall_plugin_via_cli,
 	update_plugin_via_cli,
+	validate_plugin_via_cli,
 } from '../../utils/claude-cli.js';
 import { error, output } from '../output.js';
 
@@ -253,10 +254,56 @@ const update = defineCommand({
 	},
 });
 
+const validate = defineCommand({
+	meta: {
+		name: 'validate',
+		description: 'Validate a plugin or marketplace manifest',
+	},
+	args: {
+		path: {
+			type: 'positional',
+			description: 'Path to plugin or marketplace manifest',
+			required: true,
+		},
+		json: {
+			type: 'boolean',
+			description: 'Output as JSON',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		const result = await validate_plugin_via_cli(args.path);
+
+		if (args.json) {
+			output(
+				{
+					path: args.path,
+					valid: result.success,
+					output: result.stdout,
+					error: result.error,
+				},
+				true,
+			);
+		} else if (result.success) {
+			console.log(result.stdout || 'Validation passed.');
+		} else {
+			error(result.error || 'Validation failed');
+		}
+	},
+});
+
 export default defineCommand({
 	meta: {
 		name: 'plugins',
 		description: 'Manage Claude Code plugins',
 	},
-	subCommands: { list, enable, disable, install, uninstall, update },
+	subCommands: {
+		list,
+		enable,
+		disable,
+		install,
+		uninstall,
+		update,
+		validate,
+	},
 });

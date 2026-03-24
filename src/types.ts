@@ -28,6 +28,7 @@ export interface BackupInfo {
 export type MenuAction =
 	| 'edit-config'
 	| 'edit-plugins'
+	| 'manage-marketplace'
 	| 'manage-cache'
 	| 'backup'
 	| 'add-server'
