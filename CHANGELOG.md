@@ -1,5 +1,13 @@
 # mcpick
 
+## 0.0.15
+
+### Patch Changes
+
+- 0170ea0: Add local dev workflow: mcpick dev + cache link/unlink
+- 2161258: Fix marketplace refresh, cache clear, uninstall detection;
+  add marketplace commands
+
 ## 0.0.14
 
 ### Patch Changes
