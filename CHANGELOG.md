@@ -1,5 +1,14 @@
 # mcpick
 
+## 0.0.16
+
+### Patch Changes
+
+- b671135: fix: validate marketplace repos upfront, remove unsupported
+  --scope flag
+- fed8311: feat: TUI marketplace management, plugin browse, CLI parity
+  commands
+
 ## 0.0.15
 
 ### Patch Changes
