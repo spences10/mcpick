@@ -249,9 +249,67 @@ export interface CliResultWithOutput extends CliResult {
 /**
  * Add a marketplace via Claude CLI
  */
+/**
+ * Extract GitHub owner/repo from various source formats.
+ * Returns null if not a recognizable GitHub reference.
+ */
+function parse_github_repo(
+	source: string,
+): { owner: string; repo: string } | null {
+	// HTTPS URL: https://github.com/owner/repo[.git]
+	const https_match = source.match(
+		/^https?:\/\/github\.com\/([^/]+)\/([^/.]+)(?:\.git)?$/,
+	);
+	if (https_match)
+		return { owner: https_match[1], repo: https_match[2] };
+
+	// SSH URL: git@github.com:owner/repo[.git]
+	const ssh_match = source.match(
+		/^git@github\.com:([^/]+)\/([^/.]+)(?:\.git)?$/,
+	);
+	if (ssh_match) return { owner: ssh_match[1], repo: ssh_match[2] };
+
+	// Shorthand: owner/repo (no slashes beyond the one separator)
+	const shorthand_match = source.match(/^([^/\s]+)\/([^/\s]+)$/);
+	if (shorthand_match)
+		return { owner: shorthand_match[1], repo: shorthand_match[2] };
+
+	return null;
+}
+
+/**
+ * Validate that a GitHub repository exists and is accessible.
+ * Returns an error message if validation fails, null if OK.
+ */
+async function validate_github_repo(
+	owner: string,
+	repo: string,
+): Promise<string | null> {
+	try {
+		const response = await fetch(
+			`https://api.github.com/repos/${owner}/${repo}`,
+			{
+				method: 'GET',
+				headers: { Accept: 'application/vnd.github.v3+json' },
+			},
+		);
+
+		if (response.status === 200) return null;
+		if (response.status === 404) {
+			return `Repository '${owner}/${repo}' not found on GitHub. Check the name or ensure it's not private.`;
+		}
+		if (response.status === 403) {
+			return `Access denied for '${owner}/${repo}'. The repository may be private — configure a GitHub token or use SSH.`;
+		}
+		return `GitHub API returned status ${response.status} for '${owner}/${repo}'.`;
+	} catch {
+		// Network error — skip validation and let the CLI attempt the clone
+		return null;
+	}
+}
+
 export async function marketplace_add_via_cli(
 	source: string,
-	scope: 'user' | 'project' | 'local' = 'user',
 ): Promise<CliResult> {
 	const cli_available = await check_claude_cli();
 	if (!cli_available) {
@@ -261,14 +319,47 @@ export async function marketplace_add_via_cli(
 		};
 	}
 
+	// Validate GitHub repo exists before attempting clone
+	const gh = parse_github_repo(source);
+	if (gh) {
+		const validation_error = await validate_github_repo(
+			gh.owner,
+			gh.repo,
+		);
+		if (validation_error) {
+			return { success: false, error: validation_error };
+		}
+	}
+
 	try {
 		await execAsync(
-			`claude plugin marketplace add ${shell_escape(source)} --scope ${scope}`,
+			`claude plugin marketplace add ${shell_escape(source)}`,
 		);
 		return { success: true };
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : 'Unknown error';
+
+		// Provide clearer error messages for common failures
+		if (
+			message.includes('SSH') ||
+			message.includes('Permission denied (publickey)')
+		) {
+			return {
+				success: false,
+				error: `SSH authentication failed for '${source}'. Either:\n  - Configure SSH keys: https://docs.github.com/en/authentication/connecting-to-github-with-ssh\n  - Use HTTPS URL instead: https://github.com/${gh ? `${gh.owner}/${gh.repo}` : source}`,
+			};
+		}
+		if (
+			message.includes('not found') ||
+			message.includes('does not exist')
+		) {
+			return {
+				success: false,
+				error: `Repository '${source}' not found. Check the name and your access permissions.`,
+			};
+		}
+
 		return {
 			success: false,
 			error: `Failed to add marketplace: ${message}`,

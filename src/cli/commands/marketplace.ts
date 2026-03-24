@@ -52,11 +52,6 @@ const add = defineCommand({
 				'Marketplace source (GitHub repo, URL, or local path)',
 			required: true,
 		},
-		scope: {
-			type: 'string',
-			description: 'Scope: user, project, or local (default: user)',
-			default: 'user',
-		},
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -64,27 +59,19 @@ const add = defineCommand({
 		},
 	},
 	async run({ args }) {
-		const scope = args.scope as 'user' | 'project' | 'local';
-		if (!['user', 'project', 'local'].includes(scope)) {
-			error(`Invalid scope: ${scope}. Use user, project, or local.`);
-		}
-
-		const result = await marketplace_add_via_cli(args.source, scope);
+		const result = await marketplace_add_via_cli(args.source);
 
 		if (args.json) {
 			output(
 				{
 					added: args.source,
-					scope,
 					success: result.success,
 					error: result.error,
 				},
 				true,
 			);
 		} else if (result.success) {
-			console.log(
-				`Marketplace added: ${args.source} (scope: ${scope})`,
-			);
+			console.log(`Marketplace added: ${args.source}`);
 		} else {
 			error(result.error || 'Unknown error');
 		}
