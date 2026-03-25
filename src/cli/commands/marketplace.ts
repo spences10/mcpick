@@ -1,4 +1,8 @@
 import { defineCommand } from 'citty';
+import {
+	check_restored_hooks,
+	redisable_restored_hooks,
+} from '../../core/hook-state.js';
 import { read_marketplace_manifest } from '../../core/plugin-cache.js';
 import {
 	marketplace_add_via_cli,
@@ -219,6 +223,19 @@ const update = defineCommand({
 					? `Marketplace updated: ${args.name}`
 					: 'All marketplaces updated.',
 			);
+
+			// Check if update restored any disabled hooks
+			const restored = await check_restored_hooks();
+			if (restored.length > 0) {
+				console.log(
+					`\nWarning: ${restored.length} disabled hook(s) were restored by the update.`,
+				);
+				const redisable_result =
+					await redisable_restored_hooks(restored);
+				console.log(
+					`Re-disabled ${redisable_result.success} hook(s).${redisable_result.failed > 0 ? ` Failed: ${redisable_result.failed}` : ''}`,
+				);
+			}
 		} else {
 			error(result.error || 'Unknown error');
 		}

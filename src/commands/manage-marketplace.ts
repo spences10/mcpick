@@ -8,6 +8,10 @@ import {
 	text,
 } from '@clack/prompts';
 import {
+	check_restored_hooks,
+	redisable_restored_hooks,
+} from '../core/hook-state.js';
+import {
 	read_known_marketplaces,
 	read_marketplace_manifest,
 } from '../core/plugin-cache.js';
@@ -282,6 +286,31 @@ async function handle_update(): Promise<void> {
 			log.success(`Marketplace updated: ${choice}`);
 		} else {
 			log.error(result.error || 'Unknown error');
+		}
+	}
+
+	// Check if update restored any disabled hooks
+	const restored = await check_restored_hooks();
+	if (restored.length > 0) {
+		log.warn(
+			`${restored.length} disabled hook(s) were restored by the update.`,
+		);
+		const should_redisable = await confirm({
+			message: 'Re-disable these hooks?',
+		});
+		if (!isCancel(should_redisable) && should_redisable) {
+			const redisable_result =
+				await redisable_restored_hooks(restored);
+			if (redisable_result.success > 0) {
+				log.success(
+					`Re-disabled ${redisable_result.success} hook(s).`,
+				);
+			}
+			if (redisable_result.failed > 0) {
+				log.error(
+					`Failed to re-disable ${redisable_result.failed} hook(s).`,
+				);
+			}
 		}
 	}
 }

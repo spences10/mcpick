@@ -29,6 +29,7 @@ export type MenuAction =
 	| 'edit-config'
 	| 'edit-plugins'
 	| 'manage-marketplace'
+	| 'manage-hooks'
 	| 'manage-cache'
 	| 'backup'
 	| 'add-server'
@@ -36,6 +37,54 @@ export type MenuAction =
 	| 'load-profile'
 	| 'save-profile'
 	| 'exit';
+
+// Hook types
+export type HookEventType =
+	| 'PreToolUse'
+	| 'PostToolUse'
+	| 'PostToolUseFailure'
+	| 'PermissionRequest'
+	| 'UserPromptSubmit'
+	| 'Notification'
+	| 'Stop'
+	| 'StopFailure'
+	| 'SessionStart'
+	| 'SessionEnd'
+	| 'InstructionsLoaded'
+	| 'ConfigChange'
+	| 'CwdChanged'
+	| 'FileChanged'
+	| 'SubagentStart'
+	| 'SubagentStop'
+	| 'TeammateIdle'
+	| 'TaskCompleted'
+	| 'PreCompact'
+	| 'PostCompact'
+	| 'WorktreeCreate'
+	| 'WorktreeRemove';
+
+export interface HookHandler {
+	type: 'command' | 'http' | 'prompt' | 'agent';
+	command?: string;
+	url?: string;
+	prompt?: string;
+	model?: string;
+	timeout?: number;
+	statusMessage?: string;
+	async?: boolean;
+	once?: boolean;
+	headers?: Record<string, string>;
+	allowedEnvVars?: string[];
+}
+
+export interface HookMatcher {
+	matcher?: string;
+	hooks: HookHandler[];
+}
+
+export type HookConfiguration = {
+	[K in HookEventType]?: HookMatcher[];
+};
 
 // installed_plugins.json v2 format
 export interface InstalledPluginEntry {

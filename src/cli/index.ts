@@ -29,6 +29,7 @@ const main = defineCommand({
 			import('./commands/profile.js').then((m) => m.default),
 		plugins: () =>
 			import('./commands/plugins.js').then((m) => m.default),
+		hooks: () => import('./commands/hooks.js').then((m) => m.default),
 		cache: () => import('./commands/cache.js').then((m) => m.default),
 		dev: () => import('./commands/dev.js').then((m) => m.default),
 		marketplace: () =>

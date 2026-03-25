@@ -137,6 +137,10 @@ export function get_marketplaces_dir(): string {
 	return join(get_plugins_dir(), 'marketplaces');
 }
 
+export function get_disabled_hooks_path(): string {
+	return join(get_mcpick_dir(), 'disabled-hooks.json');
+}
+
 export function get_marketplace_manifest_path(name: string): string {
 	return join(
 		get_marketplaces_dir(),
