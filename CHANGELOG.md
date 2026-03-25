@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.17
+
+### Patch Changes
+
+- 54fe401: feat: plugin hook management with per-hook disable/enable
+  and update guard
+
 ## 0.0.16
 
 ### Patch Changes
