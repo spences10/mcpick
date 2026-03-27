@@ -25,7 +25,12 @@ export async function check_claude_cli(): Promise<boolean> {
  * Escape a string for shell usage
  */
 function shell_escape(str: string): string {
-	// Replace single quotes with escaped version
+	if (process.platform === 'win32') {
+		// Windows cmd.exe does not support single-quote delimiters.
+		// Use double quotes and escape internal double quotes.
+		return `"${str.replace(/"/g, '\\"')}"`;
+	}
+	// Unix: replace single quotes with escaped version
 	return `'${str.replace(/'/g, "'\\''")}'`;
 }
 
