@@ -6,6 +6,7 @@ import {
 	restore_dev_override,
 } from '../../core/dev-override.js';
 import type { McpScope } from '../../types.js';
+import { redact_server_base } from '../../utils/redact.js';
 import { error, output } from '../output.js';
 
 const apply = defineCommand({
@@ -156,7 +157,12 @@ const list = defineCommand({
 		const overrides = await list_dev_overrides();
 
 		if (args.json) {
-			output(overrides, true);
+			const redacted = overrides.map((o) => ({
+				...o,
+				original: redact_server_base(o.original),
+				dev: redact_server_base(o.dev),
+			}));
+			output(redacted, true);
 			return;
 		}
 

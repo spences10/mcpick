@@ -2,6 +2,7 @@ import { defineCommand } from 'citty';
 import { get_enabled_servers_for_scope } from '../../core/config.js';
 import { get_all_available_servers } from '../../core/registry.js';
 import { McpScope } from '../../types.js';
+import { redact_server } from '../../utils/redact.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -50,7 +51,7 @@ export default defineCommand({
 						server.name,
 					);
 				}
-				const { name, ...rest } = server;
+				const { name, ...rest } = redact_server(server);
 				return { name, ...status, ...rest };
 			});
 			output(data, true);
