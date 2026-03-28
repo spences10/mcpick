@@ -1,5 +1,13 @@
 # mcpick
 
+## 0.0.18
+
+### Patch Changes
+
+- 58ff00f: Add clone command and skip redundant stdio transport flag
+- 7f277da: redact env keys when listing
+- b52fcbd: Show available CLI commands hint in TUI intro
+
 ## 0.0.17
 
 ### Patch Changes
