@@ -211,6 +211,9 @@ async function main(): Promise<void> {
 	}
 
 	intro('MCPick - MCP Server Configuration Manager');
+	log.info(
+		'CLI: mcpick <command> --help | Commands: list, add, clone, enable, disable, remove, get, dev, profile, plugins, hooks, backup, restore',
+	);
 
 	while (true) {
 		try {
