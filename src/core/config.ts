@@ -69,6 +69,61 @@ export function create_config_from_servers(
 }
 
 /**
+ * Find a server's full config in a specific scope.
+ */
+export async function find_server_in_scope(
+	name: string,
+	scope: McpScope,
+): Promise<{ server: McpServerBase; scope: McpScope } | null> {
+	if (scope === 'user' || scope === 'local') {
+		const config_path = get_claude_config_path();
+		try {
+			await access(config_path);
+			const content = await readFile(config_path, 'utf-8');
+			const parsed = JSON.parse(content);
+
+			if (scope === 'user') {
+				const server = parsed.mcpServers?.[name];
+				if (server) return { server, scope: 'user' };
+			} else {
+				const cwd = get_current_project_path();
+				const server = parsed.projects?.[cwd]?.mcpServers?.[name];
+				if (server) return { server, scope: 'local' };
+			}
+		} catch {
+			// File doesn't exist
+		}
+	} else if (scope === 'project') {
+		const mcp_path = get_project_mcp_json_path();
+		try {
+			await access(mcp_path);
+			const content = await readFile(mcp_path, 'utf-8');
+			const parsed = JSON.parse(content);
+			const server = parsed.mcpServers?.[name];
+			if (server) return { server, scope: 'project' };
+		} catch {
+			// File doesn't exist
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Auto-detect which scope a server lives in.
+ * Searches local → project → user.
+ */
+export async function detect_server_scope(
+	name: string,
+): Promise<{ server: McpServerBase; scope: McpScope } | null> {
+	for (const scope of ['local', 'project', 'user'] as McpScope[]) {
+		const result = await find_server_in_scope(name, scope);
+		if (result) return result;
+	}
+	return null;
+}
+
+/**
  * Read full Claude config including projects section
  */
 async function read_claude_config_full(): Promise<any> {

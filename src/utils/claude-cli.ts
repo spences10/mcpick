@@ -49,9 +49,11 @@ function build_add_command(
 	// Server name
 	parts.push(shell_escape(server.name));
 
-	// Transport type
+	// Transport type (only specify if non-default)
 	const transport = server.type || 'stdio';
-	parts.push('--transport', transport);
+	if (transport !== 'stdio') {
+		parts.push('--transport', transport);
+	}
 
 	// Scope
 	parts.push('--scope', scope);

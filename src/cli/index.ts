@@ -16,6 +16,7 @@ const main = defineCommand({
 		add: () => import('./commands/add.js').then((m) => m.default),
 		'add-json': () =>
 			import('./commands/add-json.js').then((m) => m.default),
+		clone: () => import('./commands/clone.js').then((m) => m.default),
 		get: () => import('./commands/get.js').then((m) => m.default),
 		'reset-project-choices': () =>
 			import('./commands/reset-project-choices.js').then(

@@ -345,6 +345,7 @@ const SUBCOMMANDS = new Set([
 	'remove',
 	'add',
 	'add-json',
+	'clone',
 	'get',
 	'reset-project-choices',
 	'hooks',
