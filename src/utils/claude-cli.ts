@@ -1,8 +1,8 @@
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { McpScope, McpServer } from '../types.js';
 
-const execAsync = promisify(exec);
+const exec_file_async = promisify(execFile);
 
 export interface CliResult {
 	success: boolean;
@@ -14,7 +14,7 @@ export interface CliResult {
  */
 export async function check_claude_cli(): Promise<boolean> {
 	try {
-		await execAsync('claude --version');
+		await exec_file_async('claude', ['--version']);
 		return true;
 	} catch {
 		return false;
@@ -22,75 +22,71 @@ export async function check_claude_cli(): Promise<boolean> {
 }
 
 /**
- * Escape a string for shell usage
+ * Validate environment variable key.
+ * Must start with letter or underscore, contain only alphanumeric and underscores.
  */
-function shell_escape(str: string): string {
-	// Replace single quotes with escaped version
-	return `'${str.replace(/'/g, "'\\''")}'`;
-}
-
-/**
- * Validate environment variable key
- * Must start with letter or underscore, contain only alphanumeric and underscores
- */
-function is_valid_env_key(key: string): boolean {
+export function is_valid_env_key(key: string): boolean {
 	return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
 }
 
 /**
- * Build the claude mcp add command for a server
+ * Build args array for claude mcp add command.
+ * Returns raw args — no shell escaping needed since we use execFile.
  */
-function build_add_command(
+export function build_add_args(
 	server: McpServer,
 	scope: McpScope,
-): string {
-	const parts: string[] = ['claude', 'mcp', 'add'];
+): string[] {
+	const args: string[] = ['mcp', 'add'];
 
-	// Server name
-	parts.push(shell_escape(server.name));
+	args.push(server.name);
 
-	// Transport type (only specify if non-default)
 	const transport = server.type || 'stdio';
 	if (transport !== 'stdio') {
-		parts.push('--transport', transport);
+		args.push('--transport', transport);
 	}
 
-	// Scope
-	parts.push('--scope', scope);
+	args.push('--scope', scope);
 
-	// Handle different transport types
 	if (transport === 'stdio') {
-		// Environment variables (skip invalid keys to prevent injection)
 		if (server.env) {
 			for (const [key, value] of Object.entries(server.env)) {
 				if (is_valid_env_key(key)) {
-					parts.push('-e', `${key}=${shell_escape(value)}`);
+					args.push('-e', `${key}=${value}`);
 				}
 			}
 		}
 
-		// Command and args (after --)
 		if ('command' in server && server.command) {
-			parts.push('--');
-			parts.push(shell_escape(server.command));
+			args.push('--');
+			args.push(server.command);
 			if (server.args && server.args.length > 0) {
-				parts.push(...server.args.map((arg) => shell_escape(arg)));
+				args.push(...server.args);
 			}
 		}
 	} else {
-		// HTTP or SSE transport — URL must come before header flags
 		if ('url' in server && server.url) {
-			parts.push(shell_escape(server.url));
+			args.push(server.url);
 		}
 
 		if ('headers' in server && server.headers) {
 			for (const [key, value] of Object.entries(server.headers)) {
-				parts.push('-H', shell_escape(`${key}: ${value}`));
+				args.push('-H', `${key}: ${value}`);
 			}
 		}
 	}
 
-	return parts.join(' ');
+	return args;
+}
+
+/**
+ * Run a claude CLI command using execFile (no shell).
+ * This avoids all shell escaping issues on every platform.
+ */
+async function run_claude(
+	args: string[],
+): Promise<{ stdout: string; stderr: string }> {
+	return exec_file_async('claude', args);
 }
 
 /**
@@ -100,7 +96,6 @@ export async function add_mcp_via_cli(
 	server: McpServer,
 	scope: McpScope,
 ): Promise<CliResult> {
-	// Check if CLI is available
 	const cli_available = await check_claude_cli();
 	if (!cli_available) {
 		return {
@@ -109,10 +104,8 @@ export async function add_mcp_via_cli(
 		};
 	}
 
-	const command = build_add_command(server, scope);
-
 	try {
-		await execAsync(command);
+		await run_claude(build_add_args(server, scope));
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -130,7 +123,6 @@ export async function add_mcp_via_cli(
 export async function remove_mcp_via_cli(
 	name: string,
 ): Promise<CliResult> {
-	// Check if CLI is available
 	const cli_available = await check_claude_cli();
 	if (!cli_available) {
 		return {
@@ -140,7 +132,7 @@ export async function remove_mcp_via_cli(
 	}
 
 	try {
-		await execAsync(`claude mcp remove ${shell_escape(name)}`);
+		await run_claude(['mcp', 'remove', name]);
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -168,9 +160,7 @@ export async function install_plugin_via_cli(
 	}
 
 	try {
-		await execAsync(
-			`claude plugin install ${shell_escape(key)} --scope ${scope}`,
-		);
+		await run_claude(['plugin', 'install', key, '--scope', scope]);
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -198,9 +188,13 @@ export async function uninstall_plugin_via_cli(
 	}
 
 	try {
-		await execAsync(
-			`claude plugin uninstall ${shell_escape(key)} --scope ${scope}`,
-		);
+		await run_claude([
+			'plugin',
+			'uninstall',
+			key,
+			'--scope',
+			scope,
+		]);
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -228,9 +222,7 @@ export async function update_plugin_via_cli(
 	}
 
 	try {
-		await execAsync(
-			`claude plugin update ${shell_escape(key)} --scope ${scope}`,
-		);
+		await run_claude(['plugin', 'update', key, '--scope', scope]);
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -248,9 +240,6 @@ export interface CliResultWithOutput extends CliResult {
 	stdout?: string;
 }
 
-/**
- * Add a marketplace via Claude CLI
- */
 /**
  * Extract GitHub owner/repo from various source formats.
  * Returns null if not a recognizable GitHub reference.
@@ -322,7 +311,6 @@ export async function marketplace_add_via_cli(
 	}
 
 	// Validate GitHub repo exists before attempting clone
-	// Only validate shorthand (owner/repo) — explicit URLs imply the user knows the repo
 	const gh = parse_github_repo(source);
 	const is_shorthand =
 		gh && !source.startsWith('http') && !source.startsWith('git@');
@@ -337,15 +325,12 @@ export async function marketplace_add_via_cli(
 	}
 
 	try {
-		await execAsync(
-			`claude plugin marketplace add ${shell_escape(source)}`,
-		);
+		await run_claude(['plugin', 'marketplace', 'add', source]);
 		return { success: true };
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : 'Unknown error';
 
-		// Provide clearer error messages for common failures
 		if (
 			message.includes('SSH') ||
 			message.includes('Permission denied (publickey)')
@@ -387,9 +372,7 @@ export async function marketplace_remove_via_cli(
 	}
 
 	try {
-		await execAsync(
-			`claude plugin marketplace remove ${shell_escape(name)}`,
-		);
+		await run_claude(['plugin', 'marketplace', 'remove', name]);
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -416,10 +399,9 @@ export async function marketplace_update_via_cli(
 	}
 
 	try {
-		const cmd = name
-			? `claude plugin marketplace update ${shell_escape(name)}`
-			: 'claude plugin marketplace update';
-		await execAsync(cmd);
+		const args = ['plugin', 'marketplace', 'update'];
+		if (name) args.push(name);
+		await run_claude(args);
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -444,9 +426,11 @@ export async function marketplace_list_via_cli(): Promise<CliResultWithOutput> {
 	}
 
 	try {
-		const { stdout } = await execAsync(
-			'claude plugin marketplace list',
-		);
+		const { stdout } = await run_claude([
+			'plugin',
+			'marketplace',
+			'list',
+		]);
 		return { success: true, stdout: stdout.trim() };
 	} catch (error) {
 		const message =
@@ -487,9 +471,11 @@ export async function validate_plugin_via_cli(
 	}
 
 	try {
-		const { stdout } = await execAsync(
-			`claude plugin validate ${shell_escape(path)}`,
-		);
+		const { stdout } = await run_claude([
+			'plugin',
+			'validate',
+			path,
+		]);
 		return { success: true, stdout: stdout.trim() };
 	} catch (error) {
 		const message =
@@ -516,9 +502,7 @@ export async function mcp_get_via_cli(
 	}
 
 	try {
-		const { stdout } = await execAsync(
-			`claude mcp get ${shell_escape(name)}`,
-		);
+		const { stdout } = await run_claude(['mcp', 'get', name]);
 		return { success: true, stdout: stdout.trim() };
 	} catch (error) {
 		const message =
@@ -547,9 +531,14 @@ export async function mcp_add_json_via_cli(
 	}
 
 	try {
-		await execAsync(
-			`claude mcp add-json ${shell_escape(name)} ${shell_escape(json)} --scope ${scope}`,
-		);
+		await run_claude([
+			'mcp',
+			'add-json',
+			name,
+			json,
+			'--scope',
+			scope,
+		]);
 		return { success: true };
 	} catch (error) {
 		const message =
@@ -574,7 +563,7 @@ export async function mcp_reset_project_choices_via_cli(): Promise<CliResult> {
 	}
 
 	try {
-		await execAsync('claude mcp reset-project-choices');
+		await run_claude(['mcp', 'reset-project-choices']);
 		return { success: true };
 	} catch (error) {
 		const message =
