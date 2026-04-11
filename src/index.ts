@@ -210,9 +210,11 @@ async function main(): Promise<void> {
 		return;
 	}
 
-	intro('MCPick - MCP Server Configuration Manager');
+	intro(
+		'MCPick - Claude Code Extension Manager (MCP servers, plugins, skills, marketplaces)',
+	);
 	log.info(
-		'CLI: mcpick <command> --help | Commands: list, add, clone, enable, disable, remove, get, dev, profile, plugins, hooks, backup, restore',
+		'CLI: mcpick --help | Commands: list, add, enable, disable, plugins, marketplace, hooks, profile, backup, restore',
 	);
 
 	while (true) {

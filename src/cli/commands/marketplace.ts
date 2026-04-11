@@ -49,13 +49,13 @@ const add = defineCommand({
 	meta: {
 		name: 'add',
 		description:
-			'Add a plugin marketplace (a catalog of installable plugins)',
+			'Add a plugin marketplace (a catalog of installable plugins and skills). After adding, install plugins with: mcpick plugins install <name>@<marketplace>',
 	},
 	args: {
 		source: {
 			type: 'positional',
 			description:
-				'Marketplace source (GitHub repo, URL, or local path)',
+				'Marketplace source: owner/repo (GitHub), https://... URL, or ./local-path',
 			required: true,
 		},
 		json: {

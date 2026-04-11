@@ -1,7 +1,7 @@
 {
 	"name": "mcpick",
 	"version": "0.0.18",
-	"description": "Dynamic MCP server and plugin configuration manager for Claude Code",
+	"description": "Claude Code extension manager — MCP servers, plugins (skills, hooks, agents), and marketplaces",
 	"keywords": [
 		"claude",
 		"claude-code",

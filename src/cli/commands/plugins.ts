@@ -295,7 +295,8 @@ const validate = defineCommand({
 export default defineCommand({
 	meta: {
 		name: 'plugins',
-		description: 'Manage Claude Code plugins',
+		description:
+			'Manage Claude Code plugins (bundles of skills, hooks, agents, and MCP servers). Install from a marketplace with: mcpick plugins install <name>@<marketplace>',
 	},
 	subCommands: {
 		list,
