@@ -228,14 +228,19 @@ async function main(): Promise<void> {
 						hint: 'Toggle MCP servers on/off',
 					},
 					{
-						value: 'edit-plugins' as MenuAction,
-						label: 'Manage plugins',
-						hint: 'Toggle, install, uninstall, or update plugins',
+						value: 'add-server' as MenuAction,
+						label: 'Add MCP server',
+						hint: 'Register a new MCP server',
 					},
 					{
 						value: 'manage-marketplace' as MenuAction,
 						label: 'Manage marketplaces',
-						hint: 'Add, remove, or update plugin marketplaces',
+						hint: 'Add a marketplace, then install plugins from it',
+					},
+					{
+						value: 'edit-plugins' as MenuAction,
+						label: 'Manage plugins',
+						hint: 'Toggle, install, uninstall, or update plugins',
 					},
 					{
 						value: 'manage-hooks' as MenuAction,
@@ -248,21 +253,6 @@ async function main(): Promise<void> {
 						hint: 'View, clear, or refresh plugin caches',
 					},
 					{
-						value: 'backup' as MenuAction,
-						label: 'Backup config',
-						hint: 'Create a timestamped backup',
-					},
-					{
-						value: 'add-server' as MenuAction,
-						label: 'Add MCP server',
-						hint: 'Register a new MCP server',
-					},
-					{
-						value: 'restore' as MenuAction,
-						label: 'Restore from backup',
-						hint: 'Restore from a previous backup',
-					},
-					{
 						value: 'load-profile' as MenuAction,
 						label: 'Load profile',
 						hint: 'Apply a saved profile',
@@ -271,6 +261,16 @@ async function main(): Promise<void> {
 						value: 'save-profile' as MenuAction,
 						label: 'Save profile',
 						hint: 'Save current config as profile',
+					},
+					{
+						value: 'backup' as MenuAction,
+						label: 'Backup config',
+						hint: 'Create a timestamped backup',
+					},
+					{
+						value: 'restore' as MenuAction,
+						label: 'Restore from backup',
+						hint: 'Restore from a previous backup',
 					},
 					{
 						value: 'exit' as MenuAction,
