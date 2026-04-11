@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.19
+
+### Patch Changes
+
+- 5ed618e: Migrate build tooling from tsc/prettier to vite-plus, fix all lint warnings
+- 08997dc: feat: rewrite --help for LLM agents with workflow, concepts, and examples sections
+
 ## 0.0.18
 
 ### Patch Changes
