@@ -1,5 +1,13 @@
 # mcpick
 
+## 0.0.20
+
+### Patch Changes
+
+- 00ea930: chore: add unit tests and CI workflow with GitHub Actions
+- 37a62e1: feat: auto-show help instead of TUI in non-TTY environments for LLM agents
+- fc1db54: fix: replace exec with execFile to eliminate shell injection on all platforms
+
 ## 0.0.19
 
 ### Patch Changes

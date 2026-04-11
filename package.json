@@ -1,6 +1,6 @@
 {
 	"name": "mcpick",
-	"version": "0.0.19",
+	"version": "0.0.20",
 	"description": "Claude Code extension manager — MCP servers, plugins (skills, hooks, agents), and marketplaces",
 	"keywords": [
 		"claude",
