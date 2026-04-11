@@ -1,5 +1,11 @@
 # mcpick
 
+## 0.0.21
+
+### Patch Changes
+
+- 47e40be: chore: reorder TUI menu and update README for agent-first usage
+
 ## 0.0.20
 
 ### Patch Changes
