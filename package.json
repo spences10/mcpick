@@ -2,33 +2,31 @@
 	"name": "mcpick",
 	"version": "0.0.18",
 	"description": "Dynamic MCP server and plugin configuration manager for Claude Code",
-	"type": "module",
-	"main": "./dist/index.js",
+	"keywords": [
+		"claude",
+		"claude-code",
+		"cli",
+		"configuration",
+		"mcp"
+	],
+	"license": "MIT",
+	"author": "",
 	"bin": {
 		"mcpick": "./dist/index.js"
 	},
-	"engines": {
-		"node": ">=22.0.0"
-	},
+	"type": "module",
+	"main": "./dist/index.js",
 	"scripts": {
-		"build": "tsc",
-		"dev": "tsc --watch",
+		"build": "vp pack",
+		"dev": "vp pack --watch",
 		"start": "node ./dist/index.js",
-		"format": "prettier --write .",
-		"format:check": "prettier --check .",
+		"check": "vp check",
+		"format": "vp check --fix",
+		"test": "vp test",
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "pnpm run build && changeset publish"
 	},
-	"keywords": [
-		"claude",
-		"mcp",
-		"cli",
-		"configuration",
-		"claude-code"
-	],
-	"author": "",
-	"license": "MIT",
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
 		"citty": "^0.2.1",
@@ -37,7 +35,10 @@
 	"devDependencies": {
 		"@changesets/cli": "^2.30.0",
 		"@types/node": "^25.5.0",
-		"prettier": "^3.8.1",
-		"typescript": "^5.9.3"
+		"vite-plus": "^0.1.15",
+		"vitest": "^4.1.2"
+	},
+	"engines": {
+		"node": ">=22.0.0"
 	}
 }

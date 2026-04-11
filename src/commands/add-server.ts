@@ -5,8 +5,8 @@ import { McpScope, McpServer } from '../types.js';
 import {
 	add_mcp_via_cli,
 	check_claude_cli,
-	get_scope_options,
 	get_scope_description,
+	get_scope_options,
 } from '../utils/claude-cli.js';
 
 function format_server_details(server: McpServer): string[] {
@@ -315,7 +315,7 @@ async function add_server_from_json(
 				if (!parsed.command) {
 					return 'Server configuration must include a "command" field';
 				}
-			} catch (error) {
+			} catch {
 				return 'Invalid JSON format';
 			}
 

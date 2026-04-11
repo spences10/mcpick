@@ -172,12 +172,20 @@ const list = defineCommand({
 		}
 
 		for (const o of overrides) {
-			const orig = o.original as Record<string, unknown>;
-			const dev = o.dev as Record<string, unknown>;
-			const original_cmd = orig.command
-				? `${orig.command}${orig.args ? ' ' + (orig.args as string[]).join(' ') : ''}`
-				: orig.url || '?';
-			const dev_cmd = `${dev.command}${dev.args ? ' ' + (dev.args as string[]).join(' ') : ''}`;
+			const orig = o.original;
+			const dev = o.dev;
+			const original_cmd =
+				'command' in orig
+					? `${orig.command}${'args' in orig && orig.args ? ' ' + orig.args.join(' ') : ''}`
+					: 'url' in orig
+						? orig.url
+						: '?';
+			const dev_cmd =
+				'command' in dev
+					? `${dev.command}${'args' in dev && dev.args ? ' ' + dev.args.join(' ') : ''}`
+					: 'url' in dev
+						? dev.url
+						: '?';
 
 			console.log(`${o.name}  (scope: ${o.scope})`);
 			console.log(`  original: ${original_cmd}`);

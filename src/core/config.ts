@@ -133,7 +133,7 @@ async function read_claude_config_full(): Promise<any> {
 		await access(config_path);
 		const config_content = await readFile(config_path, 'utf-8');
 		return JSON.parse(config_content);
-	} catch (error) {
+	} catch {
 		return { mcpServers: {}, projects: {} };
 	}
 }
@@ -167,23 +167,6 @@ async function read_local_mcp_servers(): Promise<string[]> {
 	}
 
 	return [];
-}
-
-/**
- * Read MCP servers from .mcp.json in current project (project scope)
- */
-async function read_project_mcp_servers(): Promise<string[]> {
-	const mcp_json_path = get_project_mcp_json_path();
-
-	try {
-		await access(mcp_json_path);
-		const content = await readFile(mcp_json_path, 'utf-8');
-		const parsed = JSON.parse(content);
-		const servers = parsed.mcpServers || {};
-		return Object.keys(servers);
-	} catch (error) {
-		return [];
-	}
 }
 
 /**

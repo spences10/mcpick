@@ -71,8 +71,7 @@ const add = defineCommand({
 			// Try to include available plugins in JSON output
 			let available_plugins: string[] = [];
 			if (result.success) {
-				const manifests =
-					await find_marketplace_plugins(args.source);
+				const manifests = await find_marketplace_plugins(args.source);
 				available_plugins = manifests;
 			}
 			output(
@@ -118,9 +117,7 @@ async function find_marketplace_plugins(
 		const manifest = await read_marketplace_manifest(name);
 		if (manifest?.plugins?.length) {
 			return manifest.plugins.map((p) => {
-				const desc = p.description
-					? ` - ${p.description}`
-					: '';
+				const desc = p.description ? ` - ${p.description}` : '';
 				return `${p.name}${desc}`;
 			});
 		}
@@ -133,9 +130,7 @@ async function show_available_plugins(source: string): Promise<void> {
 	const plugins = await find_marketplace_plugins(source);
 
 	if (plugins.length > 0) {
-		console.log(
-			`\nAvailable plugins (${plugins.length}):`,
-		);
+		console.log(`\nAvailable plugins (${plugins.length}):`);
 		for (const p of plugins) {
 			console.log(`  - ${p}`);
 		}

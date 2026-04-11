@@ -4,11 +4,12 @@
 		"module": "nodenext",
 		"moduleResolution": "nodenext",
 		"strict": true,
+		"rootDir": "./src",
 		"outDir": "./dist",
-		"sourceMap": true,
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"types": ["node", "vitest/globals"]
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist"]

@@ -368,7 +368,7 @@ if (
 	arg === '--help' ||
 	arg === '-h'
 ) {
-	import('./cli/index.js').then((m) => m.run());
+	void import('./cli/index.js').then((m) => m.run());
 } else {
 	main().catch((error) => {
 		console.error('Fatal error:', error);
