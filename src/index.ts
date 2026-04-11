@@ -365,11 +365,17 @@ const SUBCOMMANDS = new Set([
 ]);
 
 const arg = process.argv[2];
-if (
+const use_cli =
 	(arg && SUBCOMMANDS.has(arg)) ||
 	arg === '--help' ||
-	arg === '-h'
-) {
+	arg === '-h' ||
+	!process.stdout.isTTY;
+
+if (use_cli) {
+	// Non-TTY (LLM agent, piped output) with no args: show --help automatically
+	if (!arg && !process.stdout.isTTY) {
+		process.argv.push('--help');
+	}
 	void import('./cli/index.js').then((m) => m.run());
 } else {
 	main().catch((error) => {
