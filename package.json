@@ -9,8 +9,16 @@
 		"configuration",
 		"mcp"
 	],
+	"homepage": "https://github.com/spences10/mcpick#readme",
+	"bugs": {
+		"url": "https://github.com/spences10/mcpick/issues"
+	},
 	"license": "MIT",
 	"author": "",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/spences10/mcpick.git"
+	},
 	"bin": {
 		"mcpick": "./dist/index.js"
 	},
