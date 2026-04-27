@@ -1,5 +1,14 @@
 # mcpick
 
+## 0.0.22
+
+### Patch Changes
+
+- 55a46c0: chore: remove outdated documentation and refresh README for
+  vendor-neutral MCPick architecture and current CLI flows
+- f30675a: Add vendor-neutral skills management, client-first TUI
+  refactor, and safer redacted CLI output for agents.
+
 ## 0.0.21
 
 ### Patch Changes

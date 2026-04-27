@@ -1,6 +1,6 @@
 {
 	"name": "mcpick",
-	"version": "0.0.21",
+	"version": "0.0.22",
 	"description": "Vendor-neutral MCP configuration manager with first-class Claude Code support",
 	"keywords": [
 		"claude",
