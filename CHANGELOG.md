@@ -4,22 +4,27 @@
 
 ### Patch Changes
 
-- 47e40be: chore: reorder TUI menu and update README for agent-first usage
+- 47e40be: chore: reorder TUI menu and update README for agent-first
+  usage
 
 ## 0.0.20
 
 ### Patch Changes
 
 - 00ea930: chore: add unit tests and CI workflow with GitHub Actions
-- 37a62e1: feat: auto-show help instead of TUI in non-TTY environments for LLM agents
-- fc1db54: fix: replace exec with execFile to eliminate shell injection on all platforms
+- 37a62e1: feat: auto-show help instead of TUI in non-TTY environments
+  for LLM agents
+- fc1db54: fix: replace exec with execFile to eliminate shell
+  injection on all platforms
 
 ## 0.0.19
 
 ### Patch Changes
 
-- 5ed618e: Migrate build tooling from tsc/prettier to vite-plus, fix all lint warnings
-- 08997dc: feat: rewrite --help for LLM agents with workflow, concepts, and examples sections
+- 5ed618e: Migrate build tooling from tsc/prettier to vite-plus, fix
+  all lint warnings
+- 08997dc: feat: rewrite --help for LLM agents with workflow,
+  concepts, and examples sections
 
 ## 0.0.18
 

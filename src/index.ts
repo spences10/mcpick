@@ -5,18 +5,20 @@ import {
 	intro,
 	isCancel,
 	log,
+	note,
 	outro,
 	select,
 	text,
 } from '@clack/prompts';
-import { add_server } from './commands/add-server.js';
 import { backup_config } from './commands/backup.js';
 import { edit_config } from './commands/edit-config.js';
 import { edit_plugins } from './commands/edit-plugins.js';
 import { manage_cache } from './commands/manage-cache.js';
 import { manage_hooks } from './commands/manage-hooks.js';
 import { manage_marketplace } from './commands/manage-marketplace.js';
+import { manage_skills } from './commands/manage-skills.js';
 import { restore_config } from './commands/restore.js';
+import { client_adapters } from './core/client-config.js';
 import { write_claude_config } from './core/config.js';
 import {
 	list_profiles,
@@ -189,6 +191,74 @@ async function handle_save_profile(): Promise<void> {
 	log.success(`Profile '${name}' saved (${parts.join(', ')})`);
 }
 
+async function handle_client_tools(): Promise<void> {
+	const client_id = await select({
+		message: 'Which client?',
+		options: client_adapters.map((adapter) => ({
+			value: adapter.id,
+			label: adapter.label,
+		})),
+		initialValue: 'claude-code',
+	});
+
+	if (isCancel(client_id)) return;
+
+	if (client_id !== 'claude-code') {
+		const client = client_adapters.find(
+			(adapter) => adapter.id === client_id,
+		);
+		note(
+			`${client?.label ?? client_id} currently has MCP server toggling only.\n` +
+				'Use “Enable / Disable MCP servers” from the main menu.',
+		);
+		return;
+	}
+
+	const action = await select({
+		message: 'Claude Code tools',
+		options: [
+			{
+				value: 'plugins',
+				label: 'Plugins',
+				hint: 'Claude Code plugin enable/install/update',
+			},
+			{
+				value: 'marketplaces',
+				label: 'Marketplaces',
+				hint: 'Claude Code plugin marketplaces',
+			},
+			{
+				value: 'hooks',
+				label: 'Hooks',
+				hint: 'Claude Code settings/plugin hooks',
+			},
+			{
+				value: 'cache',
+				label: 'Plugin cache',
+				hint: 'Claude Code plugin cache maintenance',
+			},
+			{ value: 'back', label: 'Back' },
+		],
+	});
+
+	if (isCancel(action) || action === 'back') return;
+
+	switch (action) {
+		case 'plugins':
+			await edit_plugins();
+			break;
+		case 'marketplaces':
+			await manage_marketplace();
+			break;
+		case 'hooks':
+			await manage_hooks();
+			break;
+		case 'cache':
+			await manage_cache();
+			break;
+	}
+}
+
 async function main(): Promise<void> {
 	const args = parse_args();
 
@@ -210,11 +280,9 @@ async function main(): Promise<void> {
 		return;
 	}
 
-	intro(
-		'MCPick - Claude Code Extension Manager (MCP servers, plugins, skills, marketplaces)',
-	);
+	intro('MCPick - MCP Configuration Manager');
 	log.info(
-		'CLI: mcpick --help | Commands: list, add, enable, disable, plugins, marketplace, hooks, profile, backup, restore',
+		'Primary flow: choose a client, then toggle its MCP servers. Use CLI commands for adding/editing server definitions.',
 	);
 
 	while (true) {
@@ -225,32 +293,17 @@ async function main(): Promise<void> {
 					{
 						value: 'edit-config' as MenuAction,
 						label: 'Enable / Disable MCP servers',
-						hint: 'Toggle MCP servers on/off',
+						hint: 'Choose client, then toggle servers',
 					},
 					{
-						value: 'add-server' as MenuAction,
-						label: 'Add MCP server',
-						hint: 'Register a new MCP server',
+						value: 'skills' as MenuAction,
+						label: 'Skills',
+						hint: 'Install/list portable SKILL.md packs via skills CLI',
 					},
 					{
-						value: 'manage-marketplace' as MenuAction,
-						label: 'Manage marketplaces',
-						hint: 'Add a marketplace, then install plugins from it',
-					},
-					{
-						value: 'edit-plugins' as MenuAction,
-						label: 'Manage plugins',
-						hint: 'Toggle, install, uninstall, or update plugins',
-					},
-					{
-						value: 'manage-hooks' as MenuAction,
-						label: 'Manage hooks',
-						hint: 'List, add, or remove event hooks',
-					},
-					{
-						value: 'manage-cache' as MenuAction,
-						label: 'Manage plugin cache',
-						hint: 'View, clear, or refresh plugin caches',
+						value: 'client-tools' as MenuAction,
+						label: 'Client-specific tools',
+						hint: 'Plugins, hooks, marketplaces, cache where supported',
 					},
 					{
 						value: 'load-profile' as MenuAction,
@@ -289,23 +342,14 @@ async function main(): Promise<void> {
 				case 'edit-config':
 					await edit_config();
 					break;
-				case 'edit-plugins':
-					await edit_plugins();
+				case 'skills':
+					await manage_skills();
 					break;
-				case 'manage-marketplace':
-					await manage_marketplace();
-					break;
-				case 'manage-hooks':
-					await manage_hooks();
-					break;
-				case 'manage-cache':
-					await manage_cache();
+				case 'client-tools':
+					await handle_client_tools();
 					break;
 				case 'backup':
 					await backup_config();
-					break;
-				case 'add-server':
-					await add_server();
 					break;
 				case 'restore':
 					await restore_config();
@@ -344,6 +388,7 @@ async function main(): Promise<void> {
 }
 
 const SUBCOMMANDS = new Set([
+	'clients',
 	'list',
 	'enable',
 	'disable',
@@ -357,6 +402,7 @@ const SUBCOMMANDS = new Set([
 	'backup',
 	'restore',
 	'profile',
+	'skills',
 	'plugins',
 	'cache',
 	'dev',

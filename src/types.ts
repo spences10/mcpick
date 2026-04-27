@@ -27,12 +27,9 @@ export interface BackupInfo {
 
 export type MenuAction =
 	| 'edit-config'
-	| 'edit-plugins'
-	| 'manage-marketplace'
-	| 'manage-hooks'
-	| 'manage-cache'
+	| 'skills'
+	| 'client-tools'
 	| 'backup'
-	| 'add-server'
 	| 'restore'
 	| 'load-profile'
 	| 'save-profile'

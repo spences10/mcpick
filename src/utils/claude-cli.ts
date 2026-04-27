@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { McpScope, McpServer } from '../types.js';
+import { redact_text } from './redact.js';
 
 const exec_file_async = promisify(execFile);
 
@@ -86,7 +87,17 @@ export function build_add_args(
 async function run_claude(
 	args: string[],
 ): Promise<{ stdout: string; stderr: string }> {
-	return exec_file_async('claude', args);
+	const result = await exec_file_async('claude', args);
+	return {
+		stdout: redact_text(result.stdout),
+		stderr: redact_text(result.stderr),
+	};
+}
+
+function get_redacted_error_message(error: unknown): string {
+	return redact_text(
+		error instanceof Error ? error.message : 'Unknown error',
+	);
 }
 
 /**
@@ -108,8 +119,7 @@ export async function add_mcp_via_cli(
 		await run_claude(build_add_args(server, scope));
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to add server via CLI: ${message}`,
@@ -135,8 +145,7 @@ export async function remove_mcp_via_cli(
 		await run_claude(['mcp', 'remove', name]);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to remove server via CLI: ${message}`,
@@ -163,8 +172,7 @@ export async function install_plugin_via_cli(
 		await run_claude(['plugin', 'install', key, '--scope', scope]);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to install plugin: ${message}`,
@@ -188,17 +196,10 @@ export async function uninstall_plugin_via_cli(
 	}
 
 	try {
-		await run_claude([
-			'plugin',
-			'uninstall',
-			key,
-			'--scope',
-			scope,
-		]);
+		await run_claude(['plugin', 'uninstall', key, '--scope', scope]);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to uninstall plugin: ${message}`,
@@ -225,8 +226,7 @@ export async function update_plugin_via_cli(
 		await run_claude(['plugin', 'update', key, '--scope', scope]);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to update plugin: ${message}`,
@@ -328,8 +328,7 @@ export async function marketplace_add_via_cli(
 		await run_claude(['plugin', 'marketplace', 'add', source]);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 
 		if (
 			message.includes('SSH') ||
@@ -375,8 +374,7 @@ export async function marketplace_remove_via_cli(
 		await run_claude(['plugin', 'marketplace', 'remove', name]);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to remove marketplace: ${message}`,
@@ -404,8 +402,7 @@ export async function marketplace_update_via_cli(
 		await run_claude(args);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to update marketplace: ${message}`,
@@ -433,8 +430,7 @@ export async function marketplace_list_via_cli(): Promise<CliResultWithOutput> {
 		]);
 		return { success: true, stdout: stdout.trim() };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to list marketplaces: ${message}`,
@@ -471,15 +467,10 @@ export async function validate_plugin_via_cli(
 	}
 
 	try {
-		const { stdout } = await run_claude([
-			'plugin',
-			'validate',
-			path,
-		]);
+		const { stdout } = await run_claude(['plugin', 'validate', path]);
 		return { success: true, stdout: stdout.trim() };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Validation failed: ${message}`,
@@ -505,8 +496,7 @@ export async function mcp_get_via_cli(
 		const { stdout } = await run_claude(['mcp', 'get', name]);
 		return { success: true, stdout: stdout.trim() };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to get server details: ${message}`,
@@ -541,8 +531,7 @@ export async function mcp_add_json_via_cli(
 		]);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to add server from JSON: ${message}`,
@@ -566,8 +555,7 @@ export async function mcp_reset_project_choices_via_cli(): Promise<CliResult> {
 		await run_claude(['mcp', 'reset-project-choices']);
 		return { success: true };
 	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown error';
+		const message = get_redacted_error_message(error);
 		return {
 			success: false,
 			error: `Failed to reset project choices: ${message}`,

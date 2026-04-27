@@ -44,9 +44,7 @@ describe('validate_mcp_server', () => {
 	});
 
 	it('rejects server without name', () => {
-		expect(() =>
-			validate_mcp_server({ command: 'node' }),
-		).toThrow();
+		expect(() => validate_mcp_server({ command: 'node' })).toThrow();
 	});
 
 	it('rejects server without command or url', () => {

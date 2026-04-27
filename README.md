@@ -1,5 +1,8 @@
 # McPick
 
+Vendor-neutral MCP configuration manager with first-class Claude Code
+support.
+
 [![built with vite+](https://img.shields.io/badge/built%20with-Vite+-646CFF?logo=vite&logoColor=white)](https://viteplus.dev)
 [![tested with vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev)
 
@@ -58,10 +61,15 @@ Marketplace sources can be:
 ### Toggle MCP servers
 
 ```bash
-npx mcpick list                    # List servers and status
-npx mcpick enable <server>        # Enable a server
-npx mcpick disable <server>       # Disable a server
-npx mcpick add --name <n> ...     # Add a new server
+npx mcpick list                    # List Claude Code servers and status
+npx mcpick clients                 # Show supported MCP clients/config locations
+npx mcpick list --client gemini-cli --scope project
+npx mcpick list --client opencode --scope project
+npx mcpick list --client pi --scope user
+npx mcpick list --client vscode --scope project
+npx mcpick enable <server>        # Enable a server in Claude Code
+npx mcpick disable <server>       # Disable a server in Claude Code
+npx mcpick add --name <n> ...     # Add a new server to registry and Claude Code
 npx mcpick remove <server>        # Remove a server
 ```
 
@@ -123,11 +131,11 @@ All commands support `--json` for machine-readable output.
 
 ## Interactive TUI
 
-Running `npx mcpick` in a terminal (TTY) launches the interactive
-menu for human use:
+Running `npx mcpick` in a terminal (TTY) launches the interactive menu
+for human use:
 
 ```
-┌  MCPick - Claude Code Extension Manager
+┌  MCPick - MCP Configuration Manager
 │
 ◆  What would you like to do?
 │  ● Enable / Disable MCP servers
@@ -149,8 +157,19 @@ automatically shows `--help` instead.
 
 ## The Problem
 
-Claude Code loads **all** MCP servers at startup. With many servers
-configured, `/doctor` shows:
+MCP configuration is now spread across many AI development tools.
+Claude Code, Gemini CLI, VS Code, Cursor, Windsurf, OpenCode, and Pi
+via pi-mcp-adapter all expose MCP servers, but each has different
+config paths, field names, scopes, and client-specific options. MCPick
+keeps a portable view of MCP servers and uses client adapters for
+vendor-specific config.
+
+Pi itself has no built-in MCP support, but pi-mcp-adapter has settled
+on shared MCP config files plus Pi override files. MCPick reads that
+shape as the Pi client adapter.
+
+Claude Code also loads **all** MCP servers at startup. With many
+servers configured, `/doctor` shows:
 
 ```
  Context Usage Warnings
@@ -158,8 +177,8 @@ configured, `/doctor` shows:
 ```
 
 This means slower startup, wasted context tokens, and cognitive
-overload from too many tools. McPick lets you toggle servers on/off so
-you only load what you need.
+overload from too many tools. McPick lets you inspect MCP clients and
+toggle Claude Code servers so you only load what you need.
 
 ## Scope Support
 
@@ -171,15 +190,15 @@ you only load what you need.
 
 ## File Locations
 
-| File                                       | Purpose                      |
-| ------------------------------------------ | ---------------------------- |
-| `~/.claude.json`                           | Claude Code configuration    |
-| `.mcp.json`                                | Project-specific shared config |
-| `~/.claude/mcpick/servers.json`            | Server registry              |
-| `~/.claude/mcpick/backups/`                | Configuration backups        |
-| `~/.claude/mcpick/profiles/`               | Saved profiles               |
-| `~/.claude/plugins/cache/`                 | Cached plugin files          |
-| `~/.claude/plugins/marketplaces/`          | Marketplace git clones       |
+| File                              | Purpose                        |
+| --------------------------------- | ------------------------------ |
+| `~/.claude.json`                  | Claude Code configuration      |
+| `.mcp.json`                       | Project-specific shared config |
+| `~/.claude/mcpick/servers.json`   | Server registry                |
+| `~/.claude/mcpick/backups/`       | Configuration backups          |
+| `~/.claude/mcpick/profiles/`      | Saved profiles                 |
+| `~/.claude/plugins/cache/`        | Cached plugin files            |
+| `~/.claude/plugins/marketplaces/` | Marketplace git clones         |
 
 ## Requirements
 
