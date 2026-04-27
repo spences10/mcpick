@@ -1,187 +1,206 @@
-# McPick
+# MCPick
 
 [![built with vite+](https://img.shields.io/badge/built%20with-Vite+-646CFF?logo=vite&logoColor=white)](https://viteplus.dev)
 [![tested with vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev)
 
-Claude Code extension manager — MCP servers, plugins (skills, hooks,
-agents), and marketplaces.
+Vendor-neutral MCP configuration manager with first-class Claude Code
+support.
 
-## Quick Start
+MCPick helps humans and LLM agents inspect, toggle, and back up MCP
+server configuration across multiple AI clients. Claude Code-specific
+plugins, hooks, marketplaces, and cache commands remain available, but
+they are no longer the core product model.
 
-Use mcpick inline in Claude Code sessions. Tell Claude:
-
-```
-Use npx mcpick to add the marketplace at spences10/claude-code-toolkit
-```
-
-```
-Use npx mcpick to list my plugins and disable the ones I'm not using
-```
-
-```
-Use npx mcpick to enable only the mcp-sqlite-tools server
-```
-
-McPick auto-detects non-TTY environments and shows structured help
-instead of launching the interactive TUI — so LLM agents can read
-`npx mcpick --help` and figure out the rest.
-
-## Concepts
-
-Marketplaces contain plugins. Plugins contain skills
-(`/slash-commands`), hooks, agents, and MCP servers.
-
-```
-Marketplace → Plugin → Skills, Hooks, Agents, MCP Servers
-```
-
-## Common Workflows
-
-### Install skills from a marketplace
+## Install
 
 ```bash
-# 1. Add the marketplace
-npx mcpick marketplace add spences10/claude-code-toolkit
-
-# 2. Install a plugin from it
-npx mcpick plugins install my-plugin@claude-code-toolkit
-
-# 3. Skills are now available as /slash-commands in Claude Code
+npm install -g mcpick
+# or run without installing
+npx mcpick --help
 ```
 
-Marketplace sources can be:
+Requirements:
 
-- `owner/repo` — GitHub shorthand
-- `https://github.com/owner/repo` — full URL
-- `./local-path` — local directory
+- Node.js 22+
+- Claude Code is required only for Claude Code-specific commands
+- The external `skills` CLI is used through `npx -y skills@latest` for
+  portable skills commands
 
-### Toggle MCP servers
+## Agent-first CLI
+
+In non-TTY environments, MCPick shows help instead of launching the
+interactive TUI. This makes it safer for prompts like:
+
+> “Use mcpick to work out how to enable this MCP server.”
+
+Start with:
 
 ```bash
-npx mcpick list                    # List servers and status
-npx mcpick enable <server>        # Enable a server
-npx mcpick disable <server>       # Disable a server
-npx mcpick add --name <n> ...     # Add a new server
-npx mcpick remove <server>        # Remove a server
+npx mcpick --help
+npx mcpick clients
+npx mcpick list --json
 ```
 
-### Manage plugins
+MCPick redacts known secret patterns before printing output. MCP
+configs often contain env vars and authorization headers, so `env` and
+`headers` values are shown as `***` in JSON output.
+
+## MCP clients
+
+Supported client adapters:
+
+| Client                | Scopes               | Command examples                                  |
+| --------------------- | -------------------- | ------------------------------------------------- |
+| Claude Code           | local, project, user | `mcpick list`, `mcpick enable <server>`           |
+| Gemini CLI            | project, user        | `mcpick list --client gemini-cli --scope project` |
+| VS Code / Copilot     | project              | `mcpick list --client vscode --scope project`     |
+| Cursor                | project, user        | `mcpick list --client cursor --scope user`        |
+| Windsurf              | user                 | `mcpick list --client windsurf --scope user`      |
+| OpenCode              | project, user        | `mcpick list --client opencode --scope project`   |
+| Pi via pi-mcp-adapter | project, user        | `mcpick list --client pi --scope user`            |
+
+Show known config locations:
 
 ```bash
-npx mcpick plugins list            # List plugins and status
-npx mcpick plugins install <key>   # Install from marketplace
-npx mcpick plugins uninstall <key> # Remove plugin
-npx mcpick plugins update <key>    # Update to latest
-npx mcpick plugins enable <key>    # Enable plugin
-npx mcpick plugins disable <key>   # Disable plugin
+npx mcpick clients
+npx mcpick clients --json
 ```
 
-### Manage marketplaces
+## MCP server commands
 
 ```bash
-npx mcpick marketplace list       # List configured marketplaces
-npx mcpick marketplace add <src>  # Add a marketplace
-npx mcpick marketplace remove <n> # Remove a marketplace
-npx mcpick marketplace update     # Update all marketplaces
+# List Claude Code registry/status
+npx mcpick list
+npx mcpick list --json
+
+# List another client
+npx mcpick list --client pi --scope user --json
+npx mcpick list --client opencode --scope project
+
+# Claude Code enable/disable
+npx mcpick enable <server> --scope local
+npx mcpick disable <server> --scope local
+
+# Add/remove Claude Code server definitions
+npx mcpick add --name <server> --command npx --args "-y,package-name"
+npx mcpick add-json <name> '{"command":"npx","args":["-y","package-name"]}'
+npx mcpick remove <server>
 ```
 
-### Manage hooks
+For secret-backed servers, prefer environment variable references and
+secret-safe loading tools. MCPick redacts printed values, but MCP
+client config files may still store secrets in plain text because that
+is how many clients currently load MCP credentials.
+
+## Portable skills
+
+MCPick delegates portable SKILL.md management to the external `skills`
+CLI.
 
 ```bash
-npx mcpick hooks list             # List all hooks
-npx mcpick hooks add              # Add a settings hook
-npx mcpick hooks remove           # Remove a hook
+# List installed skills for a client
+npx mcpick skills list --agent pi --json
+
+# See available skills from a source without installing
+npx mcpick skills add spences10/skills --list
+
+# Install one skill
+npx mcpick skills add spences10/skills --agent pi --skill svelte-runes --yes
+
+# Install all skills for a client globally
+npx mcpick skills add spences10/skills --agent opencode --skill '*' --global --yes
+
+# Update/remove
+npx mcpick skills update --global --yes
+npx mcpick skills remove svelte-runes --agent pi --yes
 ```
 
-### Plugin cache
+## Claude Code-specific tools
+
+These commands wrap Claude Code concepts and are intentionally
+client-specific:
 
 ```bash
-npx mcpick cache status           # Show staleness info
-npx mcpick cache clear [key]      # Clear plugin cache
-npx mcpick cache clean-orphaned   # Remove orphaned dirs
-npx mcpick cache refresh          # Git pull marketplaces
+# Plugins
+npx mcpick plugins list
+npx mcpick plugins install <name>@<marketplace>
+npx mcpick plugins enable <name>@<marketplace>
+npx mcpick plugins disable <name>@<marketplace>
+
+# Marketplaces
+npx mcpick marketplace list
+npx mcpick marketplace add <source>
+npx mcpick marketplace update
+npx mcpick marketplace remove <name>
+
+# Hooks and plugin cache
+npx mcpick hooks list
+npx mcpick cache status
+npx mcpick cache refresh
 ```
 
-### Profiles
+## Profiles and backups
 
-Switch between server/plugin configurations instantly:
+Profiles and backups currently preserve MCP server and Claude Code
+plugin state.
 
 ```bash
-npx mcpick --profile database     # Apply a profile
-npx mcpick --save-profile mysetup # Save current config
-npx mcpick --list-profiles        # List profiles
+npx mcpick --profile database
+npx mcpick --save-profile mysetup
+npx mcpick --list-profiles
+
+npx mcpick backup
+npx mcpick restore [file]
 ```
-
-### Backups
-
-```bash
-npx mcpick backup                 # Create timestamped backup
-npx mcpick restore [file]         # Restore from backup
-```
-
-All commands support `--json` for machine-readable output.
 
 ## Interactive TUI
 
-Running `npx mcpick` in a terminal (TTY) launches the interactive
-menu for human use:
+Running `npx mcpick` in a terminal launches the human-facing menu:
 
-```
-┌  MCPick - Claude Code Extension Manager
-│
-◆  What would you like to do?
-│  ● Enable / Disable MCP servers
-│  ○ Manage plugins
-│  ○ Manage marketplaces
-│  ○ Manage hooks
-│  ○ Manage plugin cache
-│  ○ Backup config
-│  ○ Add MCP server
-│  ○ Restore from backup
-│  ○ Load profile
-│  ○ Save profile
-│  ○ Exit
-└
+```text
+MCPick - MCP Configuration Manager
+
+What would you like to do?
+  Enable / Disable MCP servers
+  Skills
+  Client-specific tools
+  Load profile
+  Save profile
+  Backup config
+  Restore from backup
+  Exit
 ```
 
-In non-TTY environments (LLM agents, piped output), mcpick
-automatically shows `--help` instead.
+The primary TUI flow is client-first: choose a client, then toggle its
+MCP servers. Claude Code plugins, hooks, marketplaces, and cache live
+under “Client-specific tools”.
 
-## The Problem
+## Config locations
 
-Claude Code loads **all** MCP servers at startup. With many servers
-configured, `/doctor` shows:
+MCPick reads the standard locations used by each client adapter.
+Common paths include:
 
+| Path                     | Purpose                                         |
+| ------------------------ | ----------------------------------------------- |
+| `~/.claude.json`         | Claude Code local/user MCP config               |
+| `.mcp.json`              | Shared project MCP config                       |
+| `.gemini/settings.json`  | Gemini CLI project config                       |
+| `.vscode/mcp.json`       | VS Code / Copilot project config                |
+| `.cursor/mcp.json`       | Cursor project config                           |
+| `opencode.json`          | OpenCode project config                         |
+| `~/.config/mcp/mcp.json` | Shared global MCP config used by pi-mcp-adapter |
+| `.pi/mcp.json`           | Pi project override                             |
+
+MCPick-owned state lives under `~/.claude/mcpick/` for historical
+compatibility.
+
+## Development
+
+```bash
+pnpm install
+pnpm test
+pnpm run check
+pnpm build
 ```
- Context Usage Warnings
- └ ⚠ Large MCP tools context (~66,687 tokens > 25,000)
-```
 
-This means slower startup, wasted context tokens, and cognitive
-overload from too many tools. McPick lets you toggle servers on/off so
-you only load what you need.
-
-## Scope Support
-
-| Scope       | Description                        | Storage Location                              |
-| ----------- | ---------------------------------- | --------------------------------------------- |
-| **Local**   | Project-specific servers (default) | `~/.claude.json` → `projects[cwd].mcpServers` |
-| **Project** | Shared via `.mcp.json` in repo     | `.mcp.json` in project root                   |
-| **User**    | Global servers for all projects    | `~/.claude.json` → `mcpServers`               |
-
-## File Locations
-
-| File                                       | Purpose                      |
-| ------------------------------------------ | ---------------------------- |
-| `~/.claude.json`                           | Claude Code configuration    |
-| `.mcp.json`                                | Project-specific shared config |
-| `~/.claude/mcpick/servers.json`            | Server registry              |
-| `~/.claude/mcpick/backups/`                | Configuration backups        |
-| `~/.claude/mcpick/profiles/`               | Saved profiles               |
-| `~/.claude/plugins/cache/`                 | Cached plugin files          |
-| `~/.claude/plugins/marketplaces/`          | Marketplace git clones       |
-
-## Requirements
-
-- Node.js 22+
-- Claude Code installed and configured
+See `docs/VENDOR_NEUTRAL_ARCHITECTURE.md` for architecture notes.

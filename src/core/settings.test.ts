@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { build_enabled_plugins, get_all_plugins } from './settings.js';
+import {
+	build_enabled_plugins,
+	get_all_plugins,
+} from './settings.js';
 
 describe('get_all_plugins', () => {
 	it('parses enabledPlugins into structured list', () => {

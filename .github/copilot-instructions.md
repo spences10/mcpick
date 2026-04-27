@@ -1,32 +1,50 @@
-# McPick Development Instructions
+# MCPick Development Instructions
 
-**Always reference these instructions first and fallback to search or
-bash commands only when you encounter unexpected information that does
-not match the info here.**
+## Project shape
 
-## Working Effectively
+MCPick is a vendor-neutral MCP configuration manager with first-class
+Claude Code support.
 
-### Prerequisites and Setup
+- Keep MCP server functionality client-neutral where possible.
+- Keep Claude Code plugins, hooks, marketplaces, and cache commands
+  clearly Claude-specific.
+- Prefer CLI flows that work well for LLM agents: non-interactive
+  flags, `--json`, useful help text, and redacted output.
 
-- Install Node.js >=22.0.0
-- Install pnpm globally: `npm install -g pnpm` (takes ~2 seconds)
+## Prerequisites
 
-### Development Commands
+- Node.js >=22.0.0
+- pnpm
 
-- **Format code**: `pnpm run format`
-- **Build**: `pnpm run build`
+## Common commands
 
-## Validation Requirements
+```bash
+pnpm install
+pnpm test
+pnpm run check
+pnpm build
+```
 
-### ALWAYS run these before submitting changes:
+## Validation before finishing
 
-1. `pnpm run format` - Auto-format all code
-2. `pnpm run build` - Check for build issues
+Always run:
 
-#### Add changeset once you're done
+```bash
+pnpm run check
+pnpm test
+pnpm build
+```
 
-Run `pnpm changeset` then follow the prompts. Use this after having
-finished the task. Most of the time this is a patch release for
-`mcpick`. Use a short and descriptive message. Always prefix the
-message with either `fix`, `feat`, `breaking`, or `chore` (most likely
-`fix` since you're mostly working on bugfixes).
+`pnpm run check` validates formatting, lint, and types through
+vite-plus.
+
+## Changesets
+
+For user-facing changes, add a changeset:
+
+```bash
+pnpm changeset
+```
+
+Use a short message prefixed with `feat`, `fix`, `chore`, or
+`breaking`.
