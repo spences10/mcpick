@@ -1,5 +1,14 @@
 # mcpick
 
+## 0.0.24
+
+### Patch Changes
+
+- 1d8cdd4: Add dry-run previews for config mutations with redacted
+  structured diffs.
+- 7059ba7: Refactor TUI profile and adapter flows to share CLI
+  mutation services, clarifying Claude-specific behavior.
+
 ## 0.0.23
 
 ### Patch Changes
