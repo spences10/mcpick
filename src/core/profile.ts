@@ -1,15 +1,11 @@
-import {
-	access,
-	readFile,
-	readdir,
-	writeFile,
-} from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import { ClaudeConfig } from '../types.js';
 import {
 	ensure_directory_exists,
 	get_profile_path,
 	get_profiles_dir,
 } from '../utils/paths.js';
+import { safe_json_write } from '../utils/safe-apply.js';
 import { read_claude_config } from './config.js';
 import { read_claude_settings } from './settings.js';
 import { validate_claude_config } from './validation.js';
@@ -125,8 +121,7 @@ export async function save_profile(
 	}
 
 	const profile_path = get_profile_path(name);
-	const content = JSON.stringify(profile_data, null, 2);
-	await writeFile(profile_path, content, 'utf-8');
+	await safe_json_write(profile_path, profile_data, 2);
 
 	return { serverCount: server_count, pluginCount: plugin_count };
 }

@@ -6,10 +6,13 @@ src/
 # Development files
 CLAUDE.md
 TODO.md
+CONTEXT.md
 pnpm-lock.yaml
 tsconfig.json
+.github/
 .git/
 .gitignore
+.vscode/
 renovate.json
 
 # Source maps (optional - remove if you want to include them)

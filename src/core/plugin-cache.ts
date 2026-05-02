@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import {
 	lstat,
 	readdir,
@@ -29,7 +29,15 @@ import {
 	get_plugin_cache_dir,
 } from '../utils/paths.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+function git(
+	dir: string,
+	args: string[],
+	timeout: number,
+): ReturnType<typeof execFileAsync> {
+	return execFileAsync('git', ['-C', dir, ...args], { timeout });
+}
 
 const EMPTY_INSTALLED: InstalledPluginsFile = {
 	version: 2,
@@ -91,11 +99,12 @@ async function get_marketplace_head_sha(
 	marketplace_path: string,
 ): Promise<string | null> {
 	try {
-		const { stdout } = await execAsync(
-			`git -C ${JSON.stringify(marketplace_path)} rev-parse HEAD`,
-			{ timeout: 10_000 },
+		const { stdout } = await git(
+			marketplace_path,
+			['rev-parse', 'HEAD'],
+			10_000,
 		);
-		return stdout.trim() || null;
+		return String(stdout).trim() || null;
 	} catch {
 		return null;
 	}
@@ -113,33 +122,30 @@ export interface RefreshResult {
 async function recover_deleted_branch(
 	dir: string,
 ): Promise<{ recovered: boolean; error?: string }> {
-	const q = JSON.stringify(dir);
 	try {
 		// Reset narrow refspec to fetch all branches
-		await execAsync(`git -C ${q} remote set-branches origin '*'`, {
-			timeout: 10_000,
-		});
-		await execAsync(`git -C ${q} fetch origin`, {
-			timeout: 30_000,
-		});
+		await git(dir, ['remote', 'set-branches', 'origin', '*'], 10_000);
+		await git(dir, ['fetch', 'origin'], 30_000);
 
 		// Detect default branch
 		let default_branch = 'main';
 		try {
-			const { stdout } = await execAsync(
-				`git -C ${q} symbolic-ref refs/remotes/origin/HEAD`,
-				{ timeout: 5_000 },
+			const { stdout } = await git(
+				dir,
+				['symbolic-ref', 'refs/remotes/origin/HEAD'],
+				5_000,
 			);
-			const match = stdout
+			const match = String(stdout)
 				.trim()
 				.match(/refs\/remotes\/origin\/(.+)/);
 			if (match) default_branch = match[1];
 		} catch {
 			// symbolic-ref not set — try main, then master
 			try {
-				await execAsync(
-					`git -C ${q} rev-parse --verify origin/main`,
-					{ timeout: 5_000 },
+				await git(
+					dir,
+					['rev-parse', '--verify', 'origin/main'],
+					5_000,
 				);
 				default_branch = 'main';
 			} catch {
@@ -147,12 +153,11 @@ async function recover_deleted_branch(
 			}
 		}
 
-		await execAsync(`git -C ${q} checkout ${default_branch}`, {
-			timeout: 10_000,
-		});
-		await execAsync(
-			`git -C ${q} reset --hard origin/${default_branch}`,
-			{ timeout: 10_000 },
+		await git(dir, ['checkout', default_branch], 10_000);
+		await git(
+			dir,
+			['reset', '--hard', `origin/${default_branch}`],
+			10_000,
 		);
 
 		return { recovered: true };
@@ -168,9 +173,7 @@ export async function refresh_marketplace(
 ): Promise<RefreshResult> {
 	const dir = marketplace.installLocation;
 	try {
-		await execAsync(`git -C ${JSON.stringify(dir)} pull --ff-only`, {
-			timeout: 30_000,
-		});
+		await git(dir, ['pull', '--ff-only'], 30_000);
 		return { success: true };
 	} catch {
 		// Fast-forward failed — attempt recovery from deleted branch

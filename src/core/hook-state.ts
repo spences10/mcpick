@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { HookHandler, HookMatcher } from '../types.js';
 import {
@@ -7,6 +7,7 @@ import {
 	get_marketplaces_dir,
 	get_mcpick_dir,
 } from '../utils/paths.js';
+import { safe_json_write } from '../utils/safe-apply.js';
 import { FlatHookEntry } from './settings.js';
 
 export interface DisabledHookEntry {
@@ -38,11 +39,7 @@ async function write_disabled_hooks(
 	entries: DisabledHookEntry[],
 ): Promise<void> {
 	await ensure_directory_exists(get_mcpick_dir());
-	await writeFile(
-		get_disabled_hooks_path(),
-		JSON.stringify(entries, null, '\t'),
-		'utf-8',
-	);
+	await safe_json_write(get_disabled_hooks_path(), entries, '\t');
 }
 
 /**
@@ -94,11 +91,7 @@ async function remove_hook_from_file(
 		delete hooks_obj[event];
 	}
 
-	await writeFile(
-		hooks_path,
-		JSON.stringify(hooks_data, null, '\t'),
-		'utf-8',
-	);
+	await safe_json_write(hooks_path, hooks_data, '\t');
 	return true;
 }
 
@@ -211,11 +204,7 @@ async function add_hook_to_file(
 
 	matcher.hooks.push(handler);
 
-	await writeFile(
-		hooks_path,
-		JSON.stringify(hooks_data, null, '\t'),
-		'utf-8',
-	);
+	await safe_json_write(hooks_path, hooks_data, '\t');
 }
 
 /**

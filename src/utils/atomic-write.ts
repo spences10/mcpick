@@ -1,5 +1,5 @@
-import { readFile, rename, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { safe_json_write } from './safe-apply.js';
 
 /**
  * Atomically write a JSON file with fresh-read merging.
@@ -24,10 +24,5 @@ export async function atomic_json_write(
 	}
 
 	const merged = merge(existing);
-	const content = JSON.stringify(merged, null, 2);
-
-	// Write to temp file then rename for atomicity
-	const tmp_path = join(dirname(file_path), `.${Date.now()}.tmp`);
-	await writeFile(tmp_path, content, 'utf-8');
-	await rename(tmp_path, file_path);
+	await safe_json_write(file_path, merged, 2);
 }

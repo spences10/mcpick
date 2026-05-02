@@ -8,9 +8,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+	add_client_server,
+	add_client_server_config,
 	get_client_adapter,
 	list_client_locations,
 	normalize_mcp_server,
+	remove_client_server,
+	resolve_client_location,
+	set_client_server_enabled,
 } from './client-config.js';
 
 let original_cwd = process.cwd();
@@ -42,7 +47,7 @@ describe('normalize_mcp_server', () => {
 			args: ['-y', '@modelcontextprotocol/server-filesystem'],
 			env: { NODE_ENV: 'production' },
 			disabled: false,
-			clientOptions: { alwaysAllow: ['read_file'] },
+			client_options: { alwaysAllow: ['read_file'] },
 		});
 	});
 
@@ -93,7 +98,7 @@ describe('normalize_mcp_server', () => {
 			args: ['-y', '@modelcontextprotocol/server-everything'],
 			env: { DEBUG: 'true' },
 			disabled: true,
-			clientOptions: { timeout: 5000 },
+			client_options: { timeout: 5000 },
 		});
 	});
 
@@ -110,7 +115,7 @@ describe('normalize_mcp_server', () => {
 			transport: 'http',
 			url: 'https://mcp.sentry.dev/mcp',
 			disabled: false,
-			clientOptions: { oauth: { scopes: ['project:read'] } },
+			client_options: { oauth: { scopes: ['project:read'] } },
 		});
 	});
 });
@@ -250,6 +255,63 @@ describe('client adapters', () => {
 		expect(written.mcp.sentry.enabled).toBe(true);
 	});
 
+	it('adds and removes JSON client servers', async () => {
+		const dir = await temp_project();
+		await mkdir(join(dir, '.vscode'), { recursive: true });
+		const config_path = join(dir, '.vscode/mcp.json');
+		const adapter = get_client_adapter('vscode');
+		expect(adapter).not.toBeNull();
+		const location = resolve_client_location(adapter!, 'project');
+
+		await add_client_server(adapter!, location, {
+			name: 'memory',
+			transport: 'stdio',
+			command: 'npx',
+			args: ['memory'],
+		});
+		await add_client_server_config(adapter!, location, 'remote', {
+			type: 'http',
+			url: 'https://mcp.example',
+		});
+		await set_client_server_enabled(
+			adapter!,
+			location,
+			'remote',
+			false,
+		);
+		await remove_client_server(adapter!, location, 'memory');
+
+		const written = JSON.parse(await readFile(config_path, 'utf-8'));
+		expect(written.servers.memory).toBeUndefined();
+		expect(written.servers.remote).toEqual({
+			type: 'http',
+			url: 'https://mcp.example',
+			disabled: true,
+		});
+	});
+
+	it('adds OpenCode servers with enabled flags', async () => {
+		const dir = await temp_project();
+		const config_path = join(dir, 'opencode.json');
+		const adapter = get_client_adapter('opencode');
+		expect(adapter).not.toBeNull();
+		const location = resolve_client_location(adapter!, 'project');
+
+		await add_client_server(adapter!, location, {
+			name: 'sentry',
+			transport: 'http',
+			url: 'https://mcp.example',
+			disabled: false,
+		});
+
+		const written = JSON.parse(await readFile(config_path, 'utf-8'));
+		expect(written.mcp.sentry).toEqual({
+			type: 'http',
+			url: 'https://mcp.example',
+			enabled: true,
+		});
+	});
+
 	it('reads Pi MCP Adapter project config', async () => {
 		const dir = await temp_project();
 		await mkdir(join(dir, '.pi'), { recursive: true });
@@ -276,7 +338,7 @@ describe('client adapters', () => {
 				transport: 'stdio',
 				command: 'npx',
 				args: ['-y', 'chrome-devtools-mcp@latest'],
-				clientOptions: { lifecycle: 'lazy', directTools: true },
+				client_options: { lifecycle: 'lazy', directTools: true },
 			},
 		]);
 	});

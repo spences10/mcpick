@@ -1,11 +1,7 @@
-import {
-	access,
-	readdir,
-	readFile,
-	writeFile,
-} from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { BackupInfo, McpServer, ServerRegistry } from '../types.js';
+import { atomic_json_write } from '../utils/atomic-write.js';
 import {
 	ensure_directory_exists,
 	get_backups_dir,
@@ -42,8 +38,10 @@ export async function write_server_registry(
 ): Promise<void> {
 	const registry_path = get_server_registry_path();
 	await ensure_directory_exists(get_mcpick_dir());
-	const registry_content = JSON.stringify(registry, null, 2);
-	await writeFile(registry_path, registry_content, 'utf-8');
+	await atomic_json_write(
+		registry_path,
+		() => registry as unknown as Record<string, unknown>,
+	);
 }
 
 export async function add_server_to_registry(

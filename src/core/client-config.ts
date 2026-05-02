@@ -1,13 +1,8 @@
-import {
-	access,
-	mkdir,
-	readFile,
-	rename,
-	writeFile,
-} from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { get_claude_config_path } from '../utils/paths.js';
+import { safe_json_write } from '../utils/safe-apply.js';
 
 export type McpClientId =
 	| 'claude-code'
@@ -31,7 +26,7 @@ export interface PortableMcpServer {
 	headers?: Record<string, string>;
 	description?: string;
 	disabled?: boolean;
-	clientOptions?: Record<string, unknown>;
+	client_options?: Record<string, unknown>;
 }
 
 export interface ClientConfigLocation {
@@ -50,7 +45,20 @@ export interface McpClientAdapter {
 	) => Promise<PortableMcpServer[]>;
 	writeEnabled?: (
 		location: ClientConfigLocation,
-		enabledNames: string[],
+		enabled_names: string[],
+	) => Promise<void>;
+	write_server?: (
+		location: ClientConfigLocation,
+		server: PortableMcpServer,
+	) => Promise<void>;
+	write_server_config?: (
+		location: ClientConfigLocation,
+		name: string,
+		config: JsonObject,
+	) => Promise<void>;
+	remove_server?: (
+		location: ClientConfigLocation,
+		name: string,
 	) => Promise<void>;
 }
 
@@ -103,10 +111,7 @@ async function write_json_file(
 	path: string,
 	data: JsonObject,
 ): Promise<void> {
-	await mkdir(dirname(path), { recursive: true });
-	const tmp_path = join(dirname(path), `.${Date.now()}.tmp`);
-	await writeFile(tmp_path, JSON.stringify(data, null, 2), 'utf-8');
-	await rename(tmp_path, path);
+	await safe_json_write(path, data, 2);
 }
 
 function parse_json_or_jsonc(content: string): unknown {
@@ -281,11 +286,11 @@ export function normalize_mcp_server(
 				: typeof config.url === 'string'
 					? config.url
 					: undefined;
-	const clientOptions: Record<string, unknown> = {};
+	const client_options: Record<string, unknown> = {};
 
 	for (const [key, value] of Object.entries(config)) {
 		if (!client_options_to_skip.has(key)) {
-			clientOptions[key] = value;
+			client_options[key] = value;
 		}
 	}
 
@@ -318,8 +323,8 @@ export function normalize_mcp_server(
 			? { description: config.description }
 			: {}),
 		...(typeof disabled === 'boolean' ? { disabled } : {}),
-		...(Object.keys(clientOptions).length > 0
-			? { clientOptions }
+		...(Object.keys(client_options).length > 0
+			? { client_options }
 			: {}),
 	};
 }
@@ -373,6 +378,27 @@ function set_server_enabled(
 	config.disabled = !enabled;
 }
 
+function portable_to_json(
+	server: PortableMcpServer,
+	mode: 'disabled' | 'enabled',
+): JsonObject {
+	const result: JsonObject = { ...server.client_options };
+	if (server.transport !== 'stdio') {
+		result.type = server.transport;
+	}
+	if (server.command) result.command = server.command;
+	if (server.args && server.args.length > 0)
+		result.args = server.args;
+	if (server.url) result.url = server.url;
+	if (server.env) result.env = server.env;
+	if (server.headers) result.headers = server.headers;
+	if (server.description) result.description = server.description;
+	if (typeof server.disabled === 'boolean') {
+		set_server_enabled(result, !server.disabled, mode);
+	}
+	return result;
+}
+
 function create_json_adapter(options: {
 	id: McpClientId;
 	label: string;
@@ -406,10 +432,10 @@ function create_json_adapter(options: {
 				options.serverKey,
 			);
 		},
-		async writeEnabled(location, enabledNames) {
+		async writeEnabled(location, enabled_names) {
 			const data = (await read_json_file(location.path)) ?? {};
 			const servers = get_server_record(data, options.serverKey);
-			const enabled = new Set(enabledNames);
+			const enabled = new Set(enabled_names);
 
 			for (const [name, config] of Object.entries(servers)) {
 				set_server_enabled(
@@ -419,6 +445,30 @@ function create_json_adapter(options: {
 				);
 			}
 
+			data[options.serverKey] = servers;
+			await write_json_file(location.path, data);
+		},
+		async write_server(location, server) {
+			const data = (await read_json_file(location.path)) ?? {};
+			const servers = get_server_record(data, options.serverKey);
+			servers[server.name] = portable_to_json(
+				server,
+				options.disabledMode ?? 'disabled',
+			);
+			data[options.serverKey] = servers;
+			await write_json_file(location.path, data);
+		},
+		async write_server_config(location, name, config) {
+			const data = (await read_json_file(location.path)) ?? {};
+			const servers = get_server_record(data, options.serverKey);
+			servers[name] = config;
+			data[options.serverKey] = servers;
+			await write_json_file(location.path, data);
+		},
+		async remove_server(location, name) {
+			const data = (await read_json_file(location.path)) ?? {};
+			const servers = get_server_record(data, options.serverKey);
+			delete servers[name];
 			data[options.serverKey] = servers;
 			await write_json_file(location.path, data);
 		},
@@ -610,6 +660,113 @@ export function get_client_adapter(
 	id: string,
 ): McpClientAdapter | null {
 	return client_adapters.find((adapter) => adapter.id === id) ?? null;
+}
+
+export function resolve_client_location(
+	adapter: McpClientAdapter,
+	scope?: McpClientScope,
+	path?: string,
+): ClientConfigLocation {
+	let locations = adapter.locations();
+
+	if (path) {
+		locations = locations.filter(
+			(location) => location.path === path,
+		);
+	} else if (scope) {
+		locations = locations.filter(
+			(location) => location.scope === scope,
+		);
+	}
+
+	if (locations.length === 1) return locations[0];
+
+	if (locations.length === 0) {
+		throw new Error(
+			`No ${adapter.label} config location matches${scope ? ` scope '${scope}'` : ''}${path ? ` path '${path}'` : ''}.`,
+		);
+	}
+
+	throw new Error(
+		`${adapter.label} has multiple matching config locations. Pass --location with one of: ${locations
+			.map((location) => location.path)
+			.join(', ')}`,
+	);
+}
+
+export async function add_client_server(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	server: PortableMcpServer,
+): Promise<void> {
+	if (!adapter.write_server) {
+		throw new Error(
+			`${adapter.label} support cannot add servers yet.`,
+		);
+	}
+	await adapter.write_server(location, server);
+}
+
+export async function add_client_server_config(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	name: string,
+	config: JsonObject,
+): Promise<void> {
+	if (!adapter.write_server_config) {
+		throw new Error(
+			`${adapter.label} support cannot add servers yet.`,
+		);
+	}
+	await adapter.write_server_config(location, name, config);
+}
+
+export async function remove_client_server(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	server_name: string,
+): Promise<void> {
+	if (!adapter.remove_server) {
+		throw new Error(
+			`${adapter.label} support cannot remove servers yet.`,
+		);
+	}
+	await adapter.remove_server(location, server_name);
+}
+
+export async function set_client_server_enabled(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	server_name: string,
+	enabled: boolean,
+): Promise<number> {
+	if (!adapter.writeEnabled) {
+		throw new Error(`${adapter.label} support is read-only.`);
+	}
+
+	const servers = await adapter.readLocation(location);
+	const server = servers.find(
+		(candidate) => candidate.name === server_name,
+	);
+	if (!server) {
+		throw new Error(
+			`Server '${server_name}' not found at ${location.path}.`,
+		);
+	}
+
+	const enabled_names = new Set(
+		servers
+			.filter((candidate) => candidate.disabled !== true)
+			.map((candidate) => candidate.name),
+	);
+	if (enabled) {
+		enabled_names.add(server.name);
+	} else {
+		enabled_names.delete(server.name);
+	}
+
+	await adapter.writeEnabled(location, [...enabled_names]);
+	return enabled_names.size;
 }
 
 export async function list_client_locations(): Promise<
