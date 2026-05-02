@@ -42,6 +42,8 @@ const main = defineCommand({
 			import('./commands/marketplace.js').then((m) => m.default),
 		reload: () =>
 			import('./commands/reload.js').then((m) => m.default),
+		rollback: () =>
+			import('./commands/rollback.js').then((m) => m.default),
 	},
 });
 

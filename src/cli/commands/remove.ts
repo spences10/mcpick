@@ -10,6 +10,7 @@ import {
 	read_server_registry,
 	write_server_registry,
 } from '../../core/registry.js';
+import { McpScope } from '../../types.js';
 import { remove_mcp_via_cli } from '../../utils/claude-cli.js';
 import { error, output } from '../output.js';
 
@@ -58,6 +59,11 @@ export default defineCommand({
 			return;
 		}
 
+		const scope = (args.scope || 'local') as McpScope;
+		if (!['local', 'project', 'user'].includes(scope)) {
+			error(`Invalid scope: ${scope}. Use local, project, or user.`);
+		}
+
 		const all_servers = await get_all_available_servers();
 		const found = all_servers.find((s) => s.name === args.server);
 
@@ -76,10 +82,13 @@ export default defineCommand({
 			await write_server_registry(registry);
 		}
 
-		await remove_mcp_via_cli(args.server);
+		await remove_mcp_via_cli(args.server, scope);
 
 		if (args.json) {
-			output({ removed: args.server, client: 'claude-code' }, true);
+			output(
+				{ removed: args.server, client: 'claude-code', scope },
+				true,
+			);
 		} else {
 			console.log(`Removed '${args.server}'`);
 		}

@@ -63,7 +63,7 @@ export default defineCommand({
 		// Sync config→registry before removing so headers/env are preserved
 		await get_all_available_servers();
 
-		const result = await remove_mcp_via_cli(args.server);
+		const result = await remove_mcp_via_cli(args.server, scope);
 		if (!result.success) {
 			error(result.error || 'Failed to disable server');
 		}

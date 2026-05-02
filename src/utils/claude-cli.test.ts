@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	build_add_args,
 	build_marketplace_add_args,
+	build_remove_args,
 	get_scope_description,
 	get_scope_options,
 	is_valid_env_key,
@@ -134,6 +135,18 @@ describe('build_add_args', () => {
 		// Raw values, no quotes added
 		expect(args).toContain("server's name");
 		expect(args).toContain('--flag=value with spaces');
+	});
+});
+
+describe('build_remove_args', () => {
+	it('includes explicit scope when provided', () => {
+		expect(build_remove_args('memory', 'project')).toEqual([
+			'mcp',
+			'remove',
+			'memory',
+			'--scope',
+			'project',
+		]);
 	});
 });
 

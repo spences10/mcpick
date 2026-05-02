@@ -151,6 +151,10 @@ npx mcpick --list-profiles
 
 npx mcpick backup
 npx mcpick restore [file]
+
+# Safe-write rollback backups created before config mutations
+npx mcpick rollback --list
+npx mcpick rollback [file]
 ```
 
 ## Interactive TUI

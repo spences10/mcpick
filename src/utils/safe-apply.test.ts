@@ -2,7 +2,11 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { safe_json_write } from './safe-apply.js';
+import {
+	list_config_backups,
+	restore_config_backup,
+	safe_json_write,
+} from './safe-apply.js';
 
 const original_env = process.env.CLAUDE_CONFIG_DIR;
 
@@ -34,5 +38,27 @@ describe('safe_json_write', () => {
 		expect(
 			JSON.parse(await readFile(result.backup_path!, 'utf-8')),
 		).toEqual({ old: true });
+
+		const backups = await list_config_backups();
+		expect(backups[0]).toMatchObject({
+			path: result.backup_path,
+			original_path: config_path,
+		});
+	});
+
+	it('restores config backups by filename', async () => {
+		const dir = await temp_dir();
+		process.env.CLAUDE_CONFIG_DIR = dir;
+		const config_path = join(dir, 'settings.json');
+		await writeFile(config_path, '{"old":true}', 'utf-8');
+		const result = await safe_json_write(config_path, { next: true });
+
+		await restore_config_backup(
+			result.backup_path!.split('/').at(-1)!,
+		);
+
+		expect(JSON.parse(await readFile(config_path, 'utf-8'))).toEqual({
+			old: true,
+		});
 	});
 });

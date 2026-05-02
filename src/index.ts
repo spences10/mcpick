@@ -408,6 +408,7 @@ const SUBCOMMANDS = new Set([
 	'dev',
 	'marketplace',
 	'reload',
+	'rollback',
 ]);
 
 const arg = process.argv[2];
