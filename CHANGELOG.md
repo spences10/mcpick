@@ -1,5 +1,16 @@
 # mcpick
 
+## 0.0.23
+
+### Patch Changes
+
+- 291b1d4: Add config rollback command, scoped Claude removals, author
+  metadata, and rollback backup tests.
+- 92a0d0e: Improve marketplace add validation, authentication checks,
+  and error messages for GitHub repository access failures.
+- 1d191a5: Add safer config writes, non-Claude client mutation
+  commands, shell-free git execution, and adapter tests.
+
 ## 0.0.22
 
 ### Patch Changes
