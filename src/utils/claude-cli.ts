@@ -240,63 +240,243 @@ export interface CliResultWithOutput extends CliResult {
 	stdout?: string;
 }
 
+type GitHubSourceKind = 'https' | 'ssh' | 'shorthand';
+
+export interface GitHubRepoRef {
+	owner: string;
+	repo: string;
+	kind: GitHubSourceKind;
+}
+
+const GITHUB_OWNER_PATTERN =
+	'[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?';
+const GITHUB_REPO_PATTERN = '[A-Za-z0-9._-]+';
+
 /**
  * Extract GitHub owner/repo from various source formats.
  * Returns null if not a recognizable GitHub reference.
  */
-function parse_github_repo(
+export function parse_github_repo(
 	source: string,
-): { owner: string; repo: string } | null {
-	// HTTPS URL: https://github.com/owner/repo[.git]
-	const https_match = source.match(
-		/^https?:\/\/github\.com\/([^/]+)\/([^/.]+)(?:\.git)?$/,
-	);
-	if (https_match)
-		return { owner: https_match[1], repo: https_match[2] };
+): GitHubRepoRef | null {
+	const trimmed = source.trim();
 
-	// SSH URL: git@github.com:owner/repo[.git]
-	const ssh_match = source.match(
-		/^git@github\.com:([^/]+)\/([^/.]+)(?:\.git)?$/,
-	);
-	if (ssh_match) return { owner: ssh_match[1], repo: ssh_match[2] };
+	try {
+		const url = new URL(trimmed);
+		if (url.hostname !== 'github.com') return null;
 
-	// Shorthand: owner/repo (no slashes beyond the one separator)
-	const shorthand_match = source.match(/^([^/\s]+)\/([^/\s]+)$/);
-	if (shorthand_match)
-		return { owner: shorthand_match[1], repo: shorthand_match[2] };
+		const [owner, raw_repo, ...rest] = url.pathname
+			.split('/')
+			.filter(Boolean);
+		if (!owner || !raw_repo || rest.length > 0) return null;
+
+		const repo = raw_repo.replace(/\.git$/, '');
+		if (!is_valid_github_repo(owner, repo)) return null;
+		return { owner, repo, kind: 'https' };
+	} catch {
+		// Not a URL; try SSH and shorthand forms below.
+	}
+
+	const ssh_match = trimmed.match(
+		new RegExp(
+			`^git@github\\.com:(${GITHUB_OWNER_PATTERN})/(${GITHUB_REPO_PATTERN})(?:\\.git)?$`,
+		),
+	);
+	if (ssh_match) {
+		return {
+			owner: ssh_match[1],
+			repo: ssh_match[2].replace(/\.git$/, ''),
+			kind: 'ssh',
+		};
+	}
+
+	const shorthand_match = trimmed.match(
+		new RegExp(
+			`^(${GITHUB_OWNER_PATTERN})/(${GITHUB_REPO_PATTERN})$`,
+		),
+	);
+	if (shorthand_match) {
+		return {
+			owner: shorthand_match[1],
+			repo: shorthand_match[2],
+			kind: 'shorthand',
+		};
+	}
 
 	return null;
 }
 
-/**
- * Validate that a GitHub repository exists and is accessible.
- * Returns an error message if validation fails, null if OK.
- */
-async function validate_github_repo(
-	owner: string,
-	repo: string,
+function is_valid_github_repo(owner: string, repo: string): boolean {
+	return (
+		new RegExp(`^${GITHUB_OWNER_PATTERN}$`).test(owner) &&
+		new RegExp(`^${GITHUB_REPO_PATTERN}$`).test(repo)
+	);
+}
+
+export function build_marketplace_add_args(source: string): string[] {
+	return ['plugin', 'marketplace', 'add', source];
+}
+
+function get_github_repo_id(ref: GitHubRepoRef): string {
+	return `${ref.owner}/${ref.repo}`;
+}
+
+function get_github_clone_urls(ref: GitHubRepoRef): string[] {
+	const repo_id = get_github_repo_id(ref);
+	const https_url = `https://github.com/${repo_id}.git`;
+	const ssh_url = `git@github.com:${repo_id}.git`;
+
+	if (ref.kind === 'https') return [https_url];
+	if (ref.kind === 'ssh') return [ssh_url];
+	return [https_url, ssh_url];
+}
+
+function get_process_error_output(error: unknown): string {
+	const process_error = error as {
+		message?: string;
+		stdout?: string | Buffer;
+		stderr?: string | Buffer;
+	};
+	return redact_text(
+		[
+			process_error.message,
+			process_error.stderr?.toString(),
+			process_error.stdout?.toString(),
+		]
+			.filter(Boolean)
+			.join('\n'),
+	);
+}
+
+async function can_access_with_git(
+	url: string,
 ): Promise<string | null> {
 	try {
+		await exec_file_async(
+			'git',
+			['ls-remote', '--exit-code', url, 'HEAD'],
+			{
+				env: {
+					...process.env,
+					GIT_TERMINAL_PROMPT: '0',
+					GIT_SSH_COMMAND: 'ssh -o BatchMode=yes',
+				},
+				timeout: 15_000,
+			},
+		);
+		return null;
+	} catch (error) {
+		return get_process_error_output(error);
+	}
+}
+
+async function can_view_with_gh(
+	repo_id: string,
+): Promise<boolean | null> {
+	try {
+		await exec_file_async(
+			'gh',
+			['repo', 'view', repo_id, '--json', 'nameWithOwner'],
+			{ timeout: 15_000 },
+		);
+		return true;
+	} catch (error) {
+		const message = get_process_error_output(error).toLowerCase();
+		if (
+			message.includes('could not resolve') ||
+			message.includes('not found') ||
+			message.includes('repository not found')
+		) {
+			return false;
+		}
+		return null;
+	}
+}
+
+async function get_github_api_status(
+	repo_id: string,
+): Promise<number | null> {
+	try {
 		const response = await fetch(
-			`https://api.github.com/repos/${owner}/${repo}`,
+			`https://api.github.com/repos/${repo_id}`,
 			{
 				method: 'GET',
 				headers: { Accept: 'application/vnd.github.v3+json' },
 			},
 		);
-
-		if (response.status === 200) return null;
-		if (response.status === 404) {
-			return `Repository '${owner}/${repo}' not found on GitHub. Check the name or ensure it's not private.`;
-		}
-		if (response.status === 403) {
-			return `Access denied for '${owner}/${repo}'. The repository may be private — configure a GitHub token or use SSH.`;
-		}
-		return `GitHub API returned status ${response.status} for '${owner}/${repo}'.`;
+		return response.status;
 	} catch {
-		// Network error — skip validation and let the CLI attempt the clone
 		return null;
 	}
+}
+
+/**
+ * Validate that a GitHub repository can be accessed by git without cloning it.
+ * Returns an error message if validation fails, null if OK.
+ */
+async function validate_github_repo(
+	ref: GitHubRepoRef,
+): Promise<string | null> {
+	const repo_id = get_github_repo_id(ref);
+	const git_errors: string[] = [];
+
+	for (const url of get_github_clone_urls(ref)) {
+		const git_error = await can_access_with_git(url);
+		if (!git_error) return null;
+		git_errors.push(git_error);
+	}
+
+	const gh_visible = await can_view_with_gh(repo_id);
+	if (gh_visible === false) {
+		return `Repository '${repo_id}' not found or not accessible with your GitHub account.`;
+	}
+
+	const api_status = await get_github_api_status(repo_id);
+	if (api_status === 404 && gh_visible !== true) {
+		return `Repository '${repo_id}' not found or private/inaccessible. Check the name, sign in with 'gh auth login', or use an SSH URL with access.`;
+	}
+	if (api_status === 403 && gh_visible !== true) {
+		return `Unable to validate '${repo_id}' because GitHub API access was denied or rate-limited. Git access also failed; check your credentials.`;
+	}
+
+	return format_git_access_error(ref, git_errors.join('\n'));
+}
+
+function format_git_access_error(
+	ref: GitHubRepoRef,
+	message: string,
+): string {
+	const repo_id = get_github_repo_id(ref);
+	const lower = message.toLowerCase();
+
+	if (
+		ref.kind === 'shorthand' &&
+		(lower.includes('could not read username') ||
+			lower.includes('authentication failed')) &&
+		(lower.includes('permission denied (publickey)') ||
+			lower.includes('ssh authentication'))
+	) {
+		return `Repository '${repo_id}' exists, but Git cannot access it over HTTPS or SSH. Run 'gh auth login' and 'gh auth setup-git', or configure an SSH key with GitHub.`;
+	}
+
+	if (
+		ref.kind === 'https' ||
+		lower.includes('https authentication failed') ||
+		lower.includes('could not read username') ||
+		lower.includes('authentication failed')
+	) {
+		return `Repository '${repo_id}' exists, but HTTPS Git authentication failed. Run 'gh auth login' and 'gh auth setup-git', configure a Git credential helper, or use git@github.com:${repo_id}.git.`;
+	}
+
+	if (
+		ref.kind === 'ssh' ||
+		lower.includes('permission denied (publickey)') ||
+		lower.includes('ssh authentication')
+	) {
+		return `SSH authentication failed for '${repo_id}'. Configure an SSH key with GitHub or use https://github.com/${repo_id}.git with a configured Git credential helper.`;
+	}
+
+	return `Unable to access GitHub repository '${repo_id}' with git. Check that the repository exists and that your HTTPS or SSH credentials can clone it.`;
 }
 
 export async function marketplace_add_via_cli(
@@ -310,42 +490,53 @@ export async function marketplace_add_via_cli(
 		};
 	}
 
-	// Validate GitHub repo exists before attempting clone
+	// Validate GitHub repo existence, access, and clone credentials before Claude tries to clone.
 	const gh = parse_github_repo(source);
-	const is_shorthand =
-		gh && !source.startsWith('http') && !source.startsWith('git@');
-	if (gh && is_shorthand) {
-		const validation_error = await validate_github_repo(
-			gh.owner,
-			gh.repo,
-		);
+	if (gh) {
+		const validation_error = await validate_github_repo(gh);
 		if (validation_error) {
 			return { success: false, error: validation_error };
 		}
 	}
 
 	try {
-		await run_claude(['plugin', 'marketplace', 'add', source]);
+		await run_claude(build_marketplace_add_args(source));
 		return { success: true };
 	} catch (error) {
 		const message = get_redacted_error_message(error);
 
-		if (
-			message.includes('SSH') ||
-			message.includes('Permission denied (publickey)')
-		) {
-			return {
-				success: false,
-				error: `SSH authentication failed for '${source}'. Either:\n  - Configure SSH keys: https://docs.github.com/en/authentication/connecting-to-github-with-ssh\n  - Use HTTPS URL instead: https://github.com/${gh ? `${gh.owner}/${gh.repo}` : source}`,
-			};
+		const lower_message = message.toLowerCase();
+		if (gh) {
+			if (
+				lower_message.includes('https authentication failed') ||
+				lower_message.includes('could not read username') ||
+				lower_message.includes('authentication failed')
+			) {
+				return {
+					success: false,
+					error: format_git_access_error(gh, message),
+				};
+			}
+			if (
+				message.includes('SSH') ||
+				message.includes('Permission denied (publickey)')
+			) {
+				return {
+					success: false,
+					error: format_git_access_error(gh, message),
+				};
+			}
 		}
+
 		if (
-			message.includes('not found') ||
-			message.includes('does not exist')
+			lower_message.includes('not found') ||
+			lower_message.includes('does not exist')
 		) {
 			return {
 				success: false,
-				error: `Repository '${source}' not found. Check the name and your access permissions.`,
+				error: gh
+					? `Repository '${get_github_repo_id(gh)}' not found or not accessible with your GitHub account.`
+					: `Repository '${source}' not found. Check the name and your access permissions.`,
 			};
 		}
 

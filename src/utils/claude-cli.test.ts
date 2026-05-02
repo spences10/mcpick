@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
 	build_add_args,
+	build_marketplace_add_args,
 	get_scope_description,
 	get_scope_options,
 	is_valid_env_key,
+	parse_github_repo,
 } from './claude-cli.js';
 
 describe('is_valid_env_key', () => {
@@ -132,6 +134,47 @@ describe('build_add_args', () => {
 		// Raw values, no quotes added
 		expect(args).toContain("server's name");
 		expect(args).toContain('--flag=value with spaces');
+	});
+});
+
+describe('parse_github_repo', () => {
+	it('parses supported GitHub source formats', () => {
+		expect(parse_github_repo('owner/repo')).toEqual({
+			owner: 'owner',
+			repo: 'repo',
+			kind: 'shorthand',
+		});
+		expect(
+			parse_github_repo('https://github.com/owner/repo.git'),
+		).toEqual({ owner: 'owner', repo: 'repo', kind: 'https' });
+		expect(
+			parse_github_repo('git@github.com:owner/repo.git'),
+		).toEqual({ owner: 'owner', repo: 'repo', kind: 'ssh' });
+	});
+
+	it('allows dots in repository names', () => {
+		expect(parse_github_repo('owner/my.repo')).toEqual({
+			owner: 'owner',
+			repo: 'my.repo',
+			kind: 'shorthand',
+		});
+	});
+
+	it('does not treat local paths as GitHub shorthand', () => {
+		expect(parse_github_repo('./local-path')).toBeNull();
+		expect(parse_github_repo('../local-path')).toBeNull();
+		expect(parse_github_repo('/tmp/local-path')).toBeNull();
+	});
+});
+
+describe('build_marketplace_add_args', () => {
+	it('does not pass unsupported --scope to marketplace add', () => {
+		expect(build_marketplace_add_args('owner/repo')).toEqual([
+			'plugin',
+			'marketplace',
+			'add',
+			'owner/repo',
+		]);
 	});
 });
 
