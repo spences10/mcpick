@@ -3,10 +3,16 @@ import {
 	add_client_server_config,
 	get_client_adapter,
 	McpClientScope,
+	preview_add_client_server_config,
 	resolve_client_location,
 } from '../../core/client-config.js';
 import { McpScope } from '../../types.js';
-import { mcp_add_json_via_cli } from '../../utils/claude-cli.js';
+import {
+	build_add_json_args,
+	mcp_add_json_via_cli,
+} from '../../utils/claude-cli.js';
+import { build_command_preview } from '../../utils/config-preview.js';
+import { print_dry_run } from '../dry-run.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -41,6 +47,11 @@ export default defineCommand({
 			description:
 				'Exact config path when a client has multiple matching locations',
 		},
+		dryRun: {
+			type: 'boolean',
+			description: 'Preview changes without writing',
+			default: false,
+		},
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -72,6 +83,7 @@ export default defineCommand({
 				args.scope as McpClientScope | undefined,
 				args.location,
 				args.json,
+				args.dryRun,
 			);
 			return;
 		}
@@ -79,6 +91,23 @@ export default defineCommand({
 		const scope = (args.scope || 'local') as McpScope;
 		if (!['local', 'project', 'user'].includes(scope)) {
 			error(`Invalid scope: ${scope}. Use local, project, or user.`);
+		}
+
+		if (args.dryRun) {
+			print_dry_run(
+				build_command_preview({
+					operation: 'add-json',
+					client: 'claude-code',
+					scope,
+					location: 'Claude Code CLI',
+					command: [
+						'claude',
+						...build_add_json_args(args.name, args.config, scope),
+					],
+				}),
+				args.json,
+			);
+			return;
 		}
 
 		const result = await mcp_add_json_via_cli(
@@ -113,6 +142,7 @@ async function add_json_to_client(
 	scope: McpClientScope | undefined,
 	location_path: string | undefined,
 	json: boolean,
+	dry_run: boolean,
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -130,6 +160,19 @@ async function add_json_to_client(
 			scope,
 			location_path,
 		);
+		if (dry_run) {
+			print_dry_run(
+				await preview_add_client_server_config(
+					adapter,
+					location,
+					name,
+					config,
+				),
+				json,
+			);
+			return;
+		}
+
 		await add_client_server_config(adapter, location, name, config);
 		if (json) {
 			output(

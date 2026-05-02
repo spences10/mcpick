@@ -2,6 +2,7 @@ import { defineCommand } from 'citty';
 import {
 	get_client_adapter,
 	McpClientScope,
+	preview_remove_client_server,
 	remove_client_server,
 	resolve_client_location,
 } from '../../core/client-config.js';
@@ -11,7 +12,12 @@ import {
 	write_server_registry,
 } from '../../core/registry.js';
 import { McpScope } from '../../types.js';
-import { remove_mcp_via_cli } from '../../utils/claude-cli.js';
+import {
+	build_remove_args,
+	remove_mcp_via_cli,
+} from '../../utils/claude-cli.js';
+import { build_command_preview } from '../../utils/config-preview.js';
+import { print_dry_run } from '../dry-run.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -41,6 +47,11 @@ export default defineCommand({
 			description:
 				'Exact config path when a client has multiple matching locations',
 		},
+		dryRun: {
+			type: 'boolean',
+			description: 'Preview changes without writing',
+			default: false,
+		},
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -55,6 +66,7 @@ export default defineCommand({
 				args.scope as McpClientScope | undefined,
 				args.location,
 				args.json,
+				args.dryRun,
 			);
 			return;
 		}
@@ -71,6 +83,23 @@ export default defineCommand({
 			error(
 				`Server '${args.server}' not found. Run 'mcpick list' to see available servers.`,
 			);
+		}
+
+		if (args.dryRun) {
+			print_dry_run(
+				build_command_preview({
+					operation: 'remove-server',
+					client: 'claude-code',
+					scope,
+					location: 'Claude Code CLI + mcpick registry',
+					command: [
+						'claude',
+						...build_remove_args(args.server, scope),
+					],
+				}),
+				args.json,
+			);
+			return;
 		}
 
 		const registry = await read_server_registry();
@@ -101,6 +130,7 @@ async function remove_from_client(
 	scope: McpClientScope | undefined,
 	location_path: string | undefined,
 	json: boolean,
+	dry_run: boolean,
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -118,6 +148,14 @@ async function remove_from_client(
 			scope,
 			location_path,
 		);
+		if (dry_run) {
+			print_dry_run(
+				await preview_remove_client_server(adapter, location, server),
+				json,
+			);
+			return;
+		}
+
 		await remove_client_server(adapter, location, server);
 		if (json) {
 			output(

@@ -1,8 +1,15 @@
-import { log, multiselect, note, select } from '@clack/prompts';
+import {
+	confirm,
+	log,
+	multiselect,
+	note,
+	select,
+} from '@clack/prompts';
 import {
 	client_adapters,
 	ClientConfigLocation,
 	McpClientAdapter,
+	preview_set_client_enabled_servers,
 	set_client_enabled_servers,
 } from '../core/client-config.js';
 import {
@@ -90,6 +97,20 @@ async function edit_client_config(
 	});
 
 	if (typeof selected_names === 'symbol') return;
+
+	const preview = await preview_set_client_enabled_servers(
+		adapter,
+		location,
+		selected_names,
+	);
+	if (preview.diff) {
+		note(preview.diff, 'Preview');
+		const should_apply = await confirm({
+			message: 'Apply these changes?',
+			initialValue: true,
+		});
+		if (typeof should_apply === 'symbol' || !should_apply) return;
+	}
 
 	await set_client_enabled_servers(adapter, location, selected_names);
 

@@ -1,6 +1,10 @@
 import { access, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import {
+	build_json_change_preview,
+	type JsonChangePreview,
+} from '../utils/config-preview.js';
 import { get_claude_config_path } from '../utils/paths.js';
 import { safe_json_write } from '../utils/safe-apply.js';
 
@@ -47,19 +51,36 @@ export interface McpClientAdapter {
 		location: ClientConfigLocation,
 		enabled_names: string[],
 	) => Promise<void>;
+	previewEnabled?: (
+		location: ClientConfigLocation,
+		enabled_names: string[],
+	) => Promise<JsonChangePreview>;
 	write_server?: (
 		location: ClientConfigLocation,
 		server: PortableMcpServer,
 	) => Promise<void>;
+	preview_write_server?: (
+		location: ClientConfigLocation,
+		server: PortableMcpServer,
+	) => Promise<JsonChangePreview>;
 	write_server_config?: (
 		location: ClientConfigLocation,
 		name: string,
 		config: JsonObject,
 	) => Promise<void>;
+	preview_write_server_config?: (
+		location: ClientConfigLocation,
+		name: string,
+		config: JsonObject,
+	) => Promise<JsonChangePreview>;
 	remove_server?: (
 		location: ClientConfigLocation,
 		name: string,
 	) => Promise<void>;
+	preview_remove_server?: (
+		location: ClientConfigLocation,
+		name: string,
+	) => Promise<JsonChangePreview>;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -406,6 +427,28 @@ function create_json_adapter(options: {
 	disabledMode?: 'disabled' | 'enabled';
 	locations: () => ClientConfigLocation[];
 }): McpClientAdapter {
+	async function read_data(
+		location: ClientConfigLocation,
+	): Promise<JsonObject> {
+		return (await read_json_file(location.path)) ?? {};
+	}
+
+	function preview(
+		location: ClientConfigLocation,
+		operation: string,
+		before: JsonObject,
+		after: JsonObject,
+	): JsonChangePreview {
+		return build_json_change_preview({
+			operation,
+			client: options.id,
+			scope: location.scope,
+			location: location.path,
+			before,
+			after,
+		});
+	}
+
 	return {
 		id: options.id,
 		label: options.label,
@@ -433,7 +476,7 @@ function create_json_adapter(options: {
 			);
 		},
 		async writeEnabled(location, enabled_names) {
-			const data = (await read_json_file(location.path)) ?? {};
+			const data = await read_data(location);
 			const servers = get_server_record(data, options.serverKey);
 			const enabled = new Set(enabled_names);
 
@@ -448,8 +491,25 @@ function create_json_adapter(options: {
 			data[options.serverKey] = servers;
 			await write_json_file(location.path, data);
 		},
+		async previewEnabled(location, enabled_names) {
+			const before = await read_data(location);
+			const after = structuredClone(before);
+			const servers = get_server_record(after, options.serverKey);
+			const enabled = new Set(enabled_names);
+
+			for (const [name, config] of Object.entries(servers)) {
+				set_server_enabled(
+					config,
+					enabled.has(name),
+					options.disabledMode ?? 'disabled',
+				);
+			}
+
+			after[options.serverKey] = servers;
+			return preview(location, 'set-enabled', before, after);
+		},
 		async write_server(location, server) {
-			const data = (await read_json_file(location.path)) ?? {};
+			const data = await read_data(location);
 			const servers = get_server_record(data, options.serverKey);
 			servers[server.name] = portable_to_json(
 				server,
@@ -458,19 +518,46 @@ function create_json_adapter(options: {
 			data[options.serverKey] = servers;
 			await write_json_file(location.path, data);
 		},
+		async preview_write_server(location, server) {
+			const before = await read_data(location);
+			const after = structuredClone(before);
+			const servers = get_server_record(after, options.serverKey);
+			servers[server.name] = portable_to_json(
+				server,
+				options.disabledMode ?? 'disabled',
+			);
+			after[options.serverKey] = servers;
+			return preview(location, 'add-server', before, after);
+		},
 		async write_server_config(location, name, config) {
-			const data = (await read_json_file(location.path)) ?? {};
+			const data = await read_data(location);
 			const servers = get_server_record(data, options.serverKey);
 			servers[name] = config;
 			data[options.serverKey] = servers;
 			await write_json_file(location.path, data);
 		},
+		async preview_write_server_config(location, name, config) {
+			const before = await read_data(location);
+			const after = structuredClone(before);
+			const servers = get_server_record(after, options.serverKey);
+			servers[name] = config;
+			after[options.serverKey] = servers;
+			return preview(location, 'add-json', before, after);
+		},
 		async remove_server(location, name) {
-			const data = (await read_json_file(location.path)) ?? {};
+			const data = await read_data(location);
 			const servers = get_server_record(data, options.serverKey);
 			delete servers[name];
 			data[options.serverKey] = servers;
 			await write_json_file(location.path, data);
+		},
+		async preview_remove_server(location, name) {
+			const before = await read_data(location);
+			const after = structuredClone(before);
+			const servers = get_server_record(after, options.serverKey);
+			delete servers[name];
+			after[options.serverKey] = servers;
+			return preview(location, 'remove-server', before, after);
 		},
 	};
 }
@@ -707,6 +794,19 @@ export async function add_client_server(
 	await adapter.write_server(location, server);
 }
 
+export async function preview_add_client_server(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	server: PortableMcpServer,
+): Promise<JsonChangePreview> {
+	if (!adapter.preview_write_server) {
+		throw new Error(
+			`${adapter.label} support cannot preview server additions yet.`,
+		);
+	}
+	return adapter.preview_write_server(location, server);
+}
+
 export async function add_client_server_config(
 	adapter: McpClientAdapter,
 	location: ClientConfigLocation,
@@ -719,6 +819,20 @@ export async function add_client_server_config(
 		);
 	}
 	await adapter.write_server_config(location, name, config);
+}
+
+export async function preview_add_client_server_config(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	name: string,
+	config: JsonObject,
+): Promise<JsonChangePreview> {
+	if (!adapter.preview_write_server_config) {
+		throw new Error(
+			`${adapter.label} support cannot preview server additions yet.`,
+		);
+	}
+	return adapter.preview_write_server_config(location, name, config);
 }
 
 export async function remove_client_server(
@@ -734,16 +848,24 @@ export async function remove_client_server(
 	await adapter.remove_server(location, server_name);
 }
 
-export async function set_client_enabled_servers(
+export async function preview_remove_client_server(
 	adapter: McpClientAdapter,
 	location: ClientConfigLocation,
-	enabled_names: string[],
-): Promise<number> {
-	if (!adapter.writeEnabled) {
-		throw new Error(`${adapter.label} support is read-only.`);
+	server_name: string,
+): Promise<JsonChangePreview> {
+	if (!adapter.preview_remove_server) {
+		throw new Error(
+			`${adapter.label} support cannot preview server removals yet.`,
+		);
 	}
+	return adapter.preview_remove_server(location, server_name);
+}
 
-	const servers = await adapter.readLocation(location);
+function assert_enabled_server_names(
+	location: ClientConfigLocation,
+	servers: PortableMcpServer[],
+	enabled_names: string[],
+): void {
 	const known_names = new Set(servers.map((server) => server.name));
 	const unknown_names = enabled_names.filter(
 		(name) => !known_names.has(name),
@@ -753,9 +875,42 @@ export async function set_client_enabled_servers(
 			`Server '${unknown_names[0]}' not found at ${location.path}.`,
 		);
 	}
+}
 
+export async function set_client_enabled_servers(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	enabled_names: string[],
+): Promise<number> {
+	if (!adapter.writeEnabled) {
+		throw new Error(`${adapter.label} support is read-only.`);
+	}
+
+	assert_enabled_server_names(
+		location,
+		await adapter.readLocation(location),
+		enabled_names,
+	);
 	await adapter.writeEnabled(location, enabled_names);
 	return enabled_names.length;
+}
+
+export async function preview_set_client_enabled_servers(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	enabled_names: string[],
+): Promise<JsonChangePreview> {
+	if (!adapter.previewEnabled) {
+		throw new Error(
+			`${adapter.label} support cannot preview toggles yet.`,
+		);
+	}
+	assert_enabled_server_names(
+		location,
+		await adapter.readLocation(location),
+		enabled_names,
+	);
+	return adapter.previewEnabled(location, enabled_names);
 }
 
 export async function set_client_server_enabled(

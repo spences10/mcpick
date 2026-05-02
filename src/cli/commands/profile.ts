@@ -1,9 +1,19 @@
 import { defineCommand } from 'citty';
+import { read_claude_config } from '../../core/config.js';
 import {
 	apply_profile_to_claude,
 	list_profiles,
+	load_profile,
 	save_current_claude_profile,
 } from '../../core/profile.js';
+import { read_claude_settings } from '../../core/settings.js';
+import { build_json_change_preview } from '../../utils/config-preview.js';
+import {
+	get_claude_config_path,
+	get_claude_settings_path,
+	get_profile_path,
+} from '../../utils/paths.js';
+import { print_dry_run } from '../dry-run.js';
 import { error, output } from '../output.js';
 
 const list = defineCommand({
@@ -50,6 +60,11 @@ const load = defineCommand({
 			description: 'Profile name',
 			required: true,
 		},
+		dryRun: {
+			type: 'boolean',
+			description: 'Preview changes without writing',
+			default: false,
+		},
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -58,6 +73,41 @@ const load = defineCommand({
 	},
 	async run({ args }) {
 		try {
+			if (args.dryRun) {
+				const profile = await load_profile(args.name);
+				const previews = [
+					build_json_change_preview({
+						operation: 'profile-load',
+						client: 'claude-code',
+						scope: 'user',
+						location: get_claude_config_path(),
+						before: await read_claude_config(),
+						after: profile.config,
+					}),
+				];
+
+				if (profile.enabledPlugins) {
+					previews.push(
+						build_json_change_preview({
+							operation: 'profile-load-plugins',
+							client: 'claude-code',
+							scope: 'user',
+							location: get_claude_settings_path(),
+							before: await read_claude_settings(),
+							after: { enabledPlugins: profile.enabledPlugins },
+						}),
+					);
+				}
+
+				if (args.json) {
+					output(previews, true);
+				} else {
+					for (const preview of previews)
+						print_dry_run(preview, false);
+				}
+				return;
+			}
+
 			const result = await apply_profile_to_claude(args.name);
 
 			if (args.json) {
@@ -97,6 +147,11 @@ const save = defineCommand({
 			description: 'Profile name',
 			required: true,
 		},
+		dryRun: {
+			type: 'boolean',
+			description: 'Preview changes without writing',
+			default: false,
+		},
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -105,6 +160,29 @@ const save = defineCommand({
 	},
 	async run({ args }) {
 		try {
+			if (args.dryRun) {
+				const config = await read_claude_config();
+				const settings = await read_claude_settings();
+				const profile_data: Record<string, unknown> = {
+					mcpServers: config.mcpServers || {},
+				};
+				if (settings.enabledPlugins) {
+					profile_data.enabledPlugins = settings.enabledPlugins;
+				}
+				print_dry_run(
+					build_json_change_preview({
+						operation: 'profile-save',
+						client: 'claude-code',
+						scope: 'user',
+						location: get_profile_path(args.name),
+						before: {},
+						after: profile_data,
+					}),
+					args.json,
+				);
+				return;
+			}
+
 			const result = await save_current_claude_profile(args.name);
 
 			if (args.json) {

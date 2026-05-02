@@ -2,12 +2,18 @@ import { defineCommand } from 'citty';
 import {
 	get_client_adapter,
 	McpClientScope,
+	preview_set_client_enabled_servers,
 	resolve_client_location,
 	set_client_server_enabled,
 } from '../../core/client-config.js';
 import { get_all_available_servers } from '../../core/registry.js';
 import { McpScope } from '../../types.js';
-import { remove_mcp_via_cli } from '../../utils/claude-cli.js';
+import {
+	build_remove_args,
+	remove_mcp_via_cli,
+} from '../../utils/claude-cli.js';
+import { build_command_preview } from '../../utils/config-preview.js';
+import { print_dry_run } from '../dry-run.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -37,6 +43,11 @@ export default defineCommand({
 			description:
 				'Exact config path when a client has multiple matching locations',
 		},
+		dryRun: {
+			type: 'boolean',
+			description: 'Preview changes without writing',
+			default: false,
+		},
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -51,6 +62,7 @@ export default defineCommand({
 				args.scope as McpClientScope | undefined,
 				args.location,
 				args.json,
+				args.dryRun,
 			);
 			return;
 		}
@@ -62,6 +74,23 @@ export default defineCommand({
 
 		// Sync config→registry before removing so headers/env are preserved
 		await get_all_available_servers();
+
+		if (args.dryRun) {
+			print_dry_run(
+				build_command_preview({
+					operation: 'disable-server',
+					client: 'claude-code',
+					scope,
+					location: 'Claude Code CLI',
+					command: [
+						'claude',
+						...build_remove_args(args.server, scope),
+					],
+				}),
+				args.json,
+			);
+			return;
+		}
 
 		const result = await remove_mcp_via_cli(args.server, scope);
 		if (!result.success) {
@@ -85,6 +114,7 @@ async function disable_client_server(
 	scope: McpClientScope | undefined,
 	location_path: string | undefined,
 	json: boolean,
+	dry_run: boolean,
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -102,6 +132,24 @@ async function disable_client_server(
 			scope,
 			location_path,
 		);
+		const servers = await adapter.readLocation(location);
+		const enabled_names = new Set(
+			servers
+				.filter((candidate) => candidate.disabled !== true)
+				.map((candidate) => candidate.name),
+		);
+		enabled_names.delete(server);
+
+		if (dry_run) {
+			print_dry_run(
+				await preview_set_client_enabled_servers(adapter, location, [
+					...enabled_names,
+				]),
+				json,
+			);
+			return;
+		}
+
 		const enabled_count = await set_client_server_enabled(
 			adapter,
 			location,
