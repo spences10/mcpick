@@ -3,6 +3,7 @@ import {
 	client_adapters,
 	ClientConfigLocation,
 	McpClientAdapter,
+	set_client_enabled_servers,
 } from '../core/client-config.js';
 import {
 	create_config_from_servers,
@@ -90,7 +91,7 @@ async function edit_client_config(
 
 	if (typeof selected_names === 'symbol') return;
 
-	await adapter.writeEnabled(location, selected_names);
+	await set_client_enabled_servers(adapter, location, selected_names);
 
 	note(
 		`Configuration updated!\n` +

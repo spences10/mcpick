@@ -734,16 +734,36 @@ export async function remove_client_server(
 	await adapter.remove_server(location, server_name);
 }
 
+export async function set_client_enabled_servers(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	enabled_names: string[],
+): Promise<number> {
+	if (!adapter.writeEnabled) {
+		throw new Error(`${adapter.label} support is read-only.`);
+	}
+
+	const servers = await adapter.readLocation(location);
+	const known_names = new Set(servers.map((server) => server.name));
+	const unknown_names = enabled_names.filter(
+		(name) => !known_names.has(name),
+	);
+	if (unknown_names.length > 0) {
+		throw new Error(
+			`Server '${unknown_names[0]}' not found at ${location.path}.`,
+		);
+	}
+
+	await adapter.writeEnabled(location, enabled_names);
+	return enabled_names.length;
+}
+
 export async function set_client_server_enabled(
 	adapter: McpClientAdapter,
 	location: ClientConfigLocation,
 	server_name: string,
 	enabled: boolean,
 ): Promise<number> {
-	if (!adapter.writeEnabled) {
-		throw new Error(`${adapter.label} support is read-only.`);
-	}
-
 	const servers = await adapter.readLocation(location);
 	const server = servers.find(
 		(candidate) => candidate.name === server_name,
@@ -765,8 +785,9 @@ export async function set_client_server_enabled(
 		enabled_names.delete(server.name);
 	}
 
-	await adapter.writeEnabled(location, [...enabled_names]);
-	return enabled_names.size;
+	return set_client_enabled_servers(adapter, location, [
+		...enabled_names,
+	]);
 }
 
 export async function list_client_locations(): Promise<

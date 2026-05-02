@@ -19,13 +19,11 @@ import { manage_marketplace } from './commands/manage-marketplace.js';
 import { manage_skills } from './commands/manage-skills.js';
 import { restore_config } from './commands/restore.js';
 import { client_adapters } from './core/client-config.js';
-import { write_claude_config } from './core/config.js';
 import {
+	apply_profile_to_claude,
 	list_profiles,
-	load_profile,
-	save_profile,
+	save_current_claude_profile,
 } from './core/profile.js';
-import { write_claude_settings } from './core/settings.js';
 import { MenuAction } from './types.js';
 
 interface CliArgs {
@@ -53,25 +51,18 @@ function parse_args(): CliArgs {
 	return result;
 }
 
-async function apply_profile(name: string): Promise<void> {
-	intro(`MCPick - Loading profile: ${name}`);
+async function apply_claude_profile(name: string): Promise<void> {
+	intro(`MCPick - Loading Claude Code profile: ${name}`);
 
 	try {
-		const profile = await load_profile(name);
-		await write_claude_config(profile.config);
-		const server_count = Object.keys(
-			profile.config.mcpServers || {},
-		).length;
-		const parts = [`${server_count} servers`];
-		if (profile.enabledPlugins) {
-			await write_claude_settings({
-				enabledPlugins: profile.enabledPlugins,
-			});
-			parts.push(
-				`${Object.keys(profile.enabledPlugins).length} plugins`,
-			);
+		const result = await apply_profile_to_claude(name);
+		const parts = [`${result.serverCount} servers`];
+		if (result.pluginCount > 0) {
+			parts.push(`${result.pluginCount} plugins`);
 		}
-		log.success(`Profile '${name}' applied (${parts.join(', ')})`);
+		log.success(
+			`Profile '${result.profile}' applied (${parts.join(', ')})`,
+		);
 		outro('Done!');
 	} catch (error) {
 		if (error instanceof Error) {
@@ -99,16 +90,18 @@ async function show_profiles(): Promise<void> {
 	outro('');
 }
 
-async function create_profile(name: string): Promise<void> {
-	intro(`MCPick - Saving profile: ${name}`);
+async function create_claude_profile(name: string): Promise<void> {
+	intro(`MCPick - Saving Claude Code profile: ${name}`);
 
 	try {
-		const counts = await save_profile(name);
-		const parts = [`${counts.serverCount} servers`];
-		if (counts.pluginCount > 0) {
-			parts.push(`${counts.pluginCount} plugins`);
+		const result = await save_current_claude_profile(name);
+		const parts = [`${result.serverCount} servers`];
+		if (result.pluginCount > 0) {
+			parts.push(`${result.pluginCount} plugins`);
 		}
-		log.success(`Profile '${name}' saved (${parts.join(', ')})`);
+		log.success(
+			`Profile '${result.profile}' saved (${parts.join(', ')})`,
+		);
 		outro('Done!');
 	} catch (error) {
 		if (error instanceof Error) {
@@ -120,7 +113,7 @@ async function create_profile(name: string): Promise<void> {
 	}
 }
 
-async function handle_load_profile(): Promise<void> {
+async function handle_load_claude_profile(): Promise<void> {
 	const profiles = await list_profiles();
 
 	if (profiles.length === 0) {
@@ -148,26 +141,17 @@ async function handle_load_profile(): Promise<void> {
 
 	if (isCancel(profile_name)) return;
 
-	const profile = await load_profile(profile_name);
-	await write_claude_config(profile.config);
-	const server_count = Object.keys(
-		profile.config.mcpServers || {},
-	).length;
-	const parts = [`${server_count} servers`];
-	if (profile.enabledPlugins) {
-		await write_claude_settings({
-			enabledPlugins: profile.enabledPlugins,
-		});
-		parts.push(
-			`${Object.keys(profile.enabledPlugins).length} plugins`,
-		);
+	const result = await apply_profile_to_claude(profile_name);
+	const parts = [`${result.serverCount} servers`];
+	if (result.pluginCount > 0) {
+		parts.push(`${result.pluginCount} plugins`);
 	}
 	log.success(
-		`Profile '${profile_name}' applied (${parts.join(', ')})`,
+		`Profile '${result.profile}' applied (${parts.join(', ')})`,
 	);
 }
 
-async function handle_save_profile(): Promise<void> {
+async function handle_save_claude_profile(): Promise<void> {
 	const name = await text({
 		message: 'Profile name:',
 		placeholder: 'e.g. database, web-dev, minimal',
@@ -183,12 +167,14 @@ async function handle_save_profile(): Promise<void> {
 
 	if (isCancel(name)) return;
 
-	const counts = await save_profile(name);
-	const parts = [`${counts.serverCount} servers`];
-	if (counts.pluginCount > 0) {
-		parts.push(`${counts.pluginCount} plugins`);
+	const result = await save_current_claude_profile(name);
+	const parts = [`${result.serverCount} servers`];
+	if (result.pluginCount > 0) {
+		parts.push(`${result.pluginCount} plugins`);
 	}
-	log.success(`Profile '${name}' saved (${parts.join(', ')})`);
+	log.success(
+		`Profile '${result.profile}' saved (${parts.join(', ')})`,
+	);
 }
 
 async function handle_client_tools(): Promise<void> {
@@ -270,13 +256,13 @@ async function main(): Promise<void> {
 
 	// Handle --save-profile <name>
 	if (args.saveProfile) {
-		await create_profile(args.saveProfile);
+		await create_claude_profile(args.saveProfile);
 		return;
 	}
 
 	// Handle --profile <name>
 	if (args.profile) {
-		await apply_profile(args.profile);
+		await apply_claude_profile(args.profile);
 		return;
 	}
 
@@ -307,13 +293,13 @@ async function main(): Promise<void> {
 					},
 					{
 						value: 'load-profile' as MenuAction,
-						label: 'Load profile',
-						hint: 'Apply a saved profile',
+						label: 'Load Claude Code profile',
+						hint: 'Apply a saved Claude Code profile',
 					},
 					{
 						value: 'save-profile' as MenuAction,
-						label: 'Save profile',
-						hint: 'Save current config as profile',
+						label: 'Save Claude Code profile',
+						hint: 'Save current Claude Code config as profile',
 					},
 					{
 						value: 'backup' as MenuAction,
@@ -355,10 +341,10 @@ async function main(): Promise<void> {
 					await restore_config();
 					break;
 				case 'load-profile':
-					await handle_load_profile();
+					await handle_load_claude_profile();
 					break;
 				case 'save-profile':
-					await handle_save_profile();
+					await handle_save_claude_profile();
 					break;
 				case 'exit':
 					outro('Goodbye!');

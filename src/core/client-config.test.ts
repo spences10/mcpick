@@ -15,6 +15,7 @@ import {
 	normalize_mcp_server,
 	remove_client_server,
 	resolve_client_location,
+	set_client_enabled_servers,
 	set_client_server_enabled,
 } from './client-config.js';
 
@@ -253,6 +254,34 @@ describe('client adapters', () => {
 		expect(written.mcp.everything.enabled).toBe(false);
 		expect(written.mcp.everything.disabled).toBeUndefined();
 		expect(written.mcp.sentry.enabled).toBe(true);
+	});
+
+	it('sets enabled servers through the shared adapter service', async () => {
+		const dir = await temp_project();
+		await mkdir(join(dir, '.vscode'), { recursive: true });
+		const config_path = join(dir, '.vscode/mcp.json');
+		await writeFile(
+			config_path,
+			JSON.stringify({
+				servers: {
+					memory: { command: 'npx', args: ['memory'] },
+					filesystem: { command: 'npx', args: ['filesystem'] },
+				},
+			}),
+		);
+
+		const adapter = get_client_adapter('vscode');
+		expect(adapter).not.toBeNull();
+		const enabled_count = await set_client_enabled_servers(
+			adapter!,
+			adapter!.locations()[0],
+			['filesystem'],
+		);
+
+		const written = JSON.parse(await readFile(config_path, 'utf-8'));
+		expect(enabled_count).toBe(1);
+		expect(written.servers.memory.disabled).toBe(true);
+		expect(written.servers.filesystem.disabled).toBe(false);
 	});
 
 	it('adds and removes JSON client servers', async () => {

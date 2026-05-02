@@ -6,8 +6,11 @@ import {
 	get_profiles_dir,
 } from '../utils/paths.js';
 import { safe_json_write } from '../utils/safe-apply.js';
-import { read_claude_config } from './config.js';
-import { read_claude_settings } from './settings.js';
+import { read_claude_config, write_claude_config } from './config.js';
+import {
+	read_claude_settings,
+	write_claude_settings,
+} from './settings.js';
 import { validate_claude_config } from './validation.js';
 
 export interface ProfileInfo {
@@ -20,6 +23,18 @@ export interface ProfileInfo {
 export interface ProfileData {
 	config: ClaudeConfig;
 	enabledPlugins?: Record<string, boolean>;
+}
+
+export interface ProfileApplyResult {
+	profile: string;
+	serverCount: number;
+	pluginCount: number;
+}
+
+export interface ProfileSaveResult {
+	profile: string;
+	serverCount: number;
+	pluginCount: number;
 }
 
 export async function load_profile(
@@ -61,6 +76,27 @@ export async function load_profile(
 		}
 		throw error;
 	}
+}
+
+export async function apply_profile_to_claude(
+	name: string,
+): Promise<ProfileApplyResult> {
+	const profile = await load_profile(name);
+	await write_claude_config(profile.config);
+
+	const serverCount = Object.keys(
+		profile.config.mcpServers || {},
+	).length;
+	let pluginCount = 0;
+
+	if (profile.enabledPlugins) {
+		await write_claude_settings({
+			enabledPlugins: profile.enabledPlugins,
+		});
+		pluginCount = Object.keys(profile.enabledPlugins).length;
+	}
+
+	return { profile: name, serverCount, pluginCount };
 }
 
 export async function list_profiles(): Promise<ProfileInfo[]> {
@@ -124,4 +160,15 @@ export async function save_profile(
 	await safe_json_write(profile_path, profile_data, 2);
 
 	return { serverCount: server_count, pluginCount: plugin_count };
+}
+
+export async function save_current_claude_profile(
+	name: string,
+): Promise<ProfileSaveResult> {
+	const counts = await save_profile(name);
+	return {
+		profile: name,
+		serverCount: counts.serverCount,
+		pluginCount: counts.pluginCount,
+	};
 }

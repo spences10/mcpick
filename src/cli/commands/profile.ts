@@ -1,11 +1,9 @@
 import { defineCommand } from 'citty';
-import { write_claude_config } from '../../core/config.js';
 import {
+	apply_profile_to_claude,
 	list_profiles,
-	load_profile,
-	save_profile,
+	save_current_claude_profile,
 } from '../../core/profile.js';
-import { write_claude_settings } from '../../core/settings.js';
 import { error, output } from '../output.js';
 
 const list = defineCommand({
@@ -60,36 +58,24 @@ const load = defineCommand({
 	},
 	async run({ args }) {
 		try {
-			const profile = await load_profile(args.name);
-			await write_claude_config(profile.config);
-			const server_count = Object.keys(
-				profile.config.mcpServers || {},
-			).length;
-
-			let plugin_count = 0;
-			if (profile.enabledPlugins) {
-				await write_claude_settings({
-					enabledPlugins: profile.enabledPlugins,
-				});
-				plugin_count = Object.keys(profile.enabledPlugins).length;
-			}
+			const result = await apply_profile_to_claude(args.name);
 
 			if (args.json) {
 				output(
 					{
-						profile: args.name,
-						servers: server_count,
-						plugins: plugin_count,
+						profile: result.profile,
+						servers: result.serverCount,
+						plugins: result.pluginCount,
 					},
 					true,
 				);
 			} else {
-				const parts = [`${server_count} servers`];
-				if (plugin_count > 0) {
-					parts.push(`${plugin_count} plugins`);
+				const parts = [`${result.serverCount} servers`];
+				if (result.pluginCount > 0) {
+					parts.push(`${result.pluginCount} plugins`);
 				}
 				console.log(
-					`Profile '${args.name}' applied (${parts.join(', ')})`,
+					`Profile '${result.profile}' applied (${parts.join(', ')})`,
 				);
 			}
 		} catch (err) {
@@ -119,24 +105,24 @@ const save = defineCommand({
 	},
 	async run({ args }) {
 		try {
-			const counts = await save_profile(args.name);
+			const result = await save_current_claude_profile(args.name);
 
 			if (args.json) {
 				output(
 					{
-						profile: args.name,
-						servers: counts.serverCount,
-						plugins: counts.pluginCount,
+						profile: result.profile,
+						servers: result.serverCount,
+						plugins: result.pluginCount,
 					},
 					true,
 				);
 			} else {
-				const parts = [`${counts.serverCount} servers`];
-				if (counts.pluginCount > 0) {
-					parts.push(`${counts.pluginCount} plugins`);
+				const parts = [`${result.serverCount} servers`];
+				if (result.pluginCount > 0) {
+					parts.push(`${result.pluginCount} plugins`);
 				}
 				console.log(
-					`Profile '${args.name}' saved (${parts.join(', ')})`,
+					`Profile '${result.profile}' saved (${parts.join(', ')})`,
 				);
 			}
 		} catch (err) {
