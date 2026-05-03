@@ -119,14 +119,21 @@ async function create_claude_profile(name: string): Promise<void> {
 	}
 }
 
+function sorted_client_adapters(): McpClientAdapter[] {
+	return [...client_adapters].sort((a, b) =>
+		b.label.localeCompare(a.label),
+	);
+}
+
 async function select_client_adapter(): Promise<McpClientAdapter | null> {
+	const adapters = sorted_client_adapters();
 	const client_id = await select({
 		message: 'Which MCP client?',
-		options: client_adapters.map((adapter) => ({
+		options: adapters.map((adapter) => ({
 			value: adapter.id,
 			label: adapter.label,
 		})),
-		initialValue: 'claude-code',
+		initialValue: adapters[0]?.id,
 	});
 
 	if (isCancel(client_id)) return null;
@@ -246,13 +253,14 @@ async function handle_save_profile(): Promise<void> {
 }
 
 async function handle_client_tools(): Promise<void> {
+	const adapters = sorted_client_adapters();
 	const client_id = await select({
 		message: 'Which client?',
-		options: client_adapters.map((adapter) => ({
+		options: adapters.map((adapter) => ({
 			value: adapter.id,
 			label: adapter.label,
 		})),
-		initialValue: 'claude-code',
+		initialValue: adapters[0]?.id,
 	});
 
 	if (isCancel(client_id)) return;
