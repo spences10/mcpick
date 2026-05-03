@@ -90,7 +90,8 @@ secrets to exist in config files or process environment.
    client config, backup, write, and verify across clients.
 2. **Portable Registry Module** — migrate `src/core/registry.ts` away
    from Claude-shaped `mcpServers`.
-3. **Profile Module** — make profiles portable first, then
-   adapter-specific when applying.
+3. **Profile Module** — profiles now save as portable `version: 2`
+   server snapshots and can apply through client adapters; keep
+   deepening migration and preview UX.
 4. **Claude Extension Module** — continue isolating plugins, hooks,
    marketplaces, and cache as Claude-specific functionality.

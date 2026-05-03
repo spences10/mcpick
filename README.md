@@ -141,13 +141,19 @@ npx mcpick cache refresh
 
 ## Profiles and backups
 
-Profiles and backups currently preserve MCP server and Claude Code
-plugin state.
+Profiles are portable MCP server snapshots. Claude Code plugin state
+is preserved as optional Claude-specific profile metadata.
 
 ```bash
+# Legacy Claude Code shortcuts still work
 npx mcpick --profile database
 npx mcpick --save-profile mysetup
 npx mcpick --list-profiles
+
+# Save/load profiles for a specific MCP client
+npx mcpick profile save work --client vscode --scope project
+npx mcpick profile load work --client opencode --scope project --dry-run
+npx mcpick profile load work --client pi --scope user
 
 npx mcpick backup
 npx mcpick restore [file]

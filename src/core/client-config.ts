@@ -81,6 +81,14 @@ export interface McpClientAdapter {
 		location: ClientConfigLocation,
 		name: string,
 	) => Promise<JsonChangePreview>;
+	write_servers?: (
+		location: ClientConfigLocation,
+		servers: PortableMcpServer[],
+	) => Promise<void>;
+	preview_write_servers?: (
+		location: ClientConfigLocation,
+		servers: PortableMcpServer[],
+	) => Promise<JsonChangePreview>;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -420,6 +428,18 @@ function portable_to_json(
 	return result;
 }
 
+function portable_server_map(
+	servers: PortableMcpServer[],
+	mode: 'disabled' | 'enabled',
+): Record<string, JsonObject> {
+	return Object.fromEntries(
+		servers.map((server) => [
+			server.name,
+			portable_to_json(server, mode),
+		]),
+	);
+}
+
 function create_json_adapter(options: {
 	id: McpClientId;
 	label: string;
@@ -559,6 +579,23 @@ function create_json_adapter(options: {
 			after[options.serverKey] = servers;
 			return preview(location, 'remove-server', before, after);
 		},
+		async write_servers(location, servers) {
+			const data = await read_data(location);
+			data[options.serverKey] = portable_server_map(
+				servers,
+				options.disabledMode ?? 'disabled',
+			);
+			await write_json_file(location.path, data);
+		},
+		async preview_write_servers(location, servers) {
+			const before = await read_data(location);
+			const after = structuredClone(before);
+			after[options.serverKey] = portable_server_map(
+				servers,
+				options.disabledMode ?? 'disabled',
+			);
+			return preview(location, 'profile-load', before, after);
+		},
 	};
 }
 
@@ -636,6 +673,79 @@ export const client_adapters: McpClientAdapter[] = [
 				project_config as JsonObject,
 				'mcpServers',
 			);
+		},
+		async write_servers(location, servers) {
+			const data =
+				(await read_json_file(location.path)) ??
+				(location.scope === 'project' ? {} : { projects: {} });
+			const mcp_servers = portable_server_map(servers, 'disabled');
+
+			if (location.scope === 'project') {
+				data.mcpServers = mcp_servers;
+				await write_json_file(location.path, data);
+				return;
+			}
+
+			if (location.scope === 'user') {
+				data.mcpServers = mcp_servers;
+				await write_json_file(get_claude_config_path(), data);
+				return;
+			}
+
+			const projects =
+				data.projects &&
+				typeof data.projects === 'object' &&
+				!Array.isArray(data.projects)
+					? (data.projects as JsonObject)
+					: {};
+			const project_config =
+				projects[process.cwd()] &&
+				typeof projects[process.cwd()] === 'object' &&
+				!Array.isArray(projects[process.cwd()])
+					? (projects[process.cwd()] as JsonObject)
+					: {};
+			project_config.mcpServers = mcp_servers;
+			projects[process.cwd()] = project_config;
+			data.projects = projects;
+			await write_json_file(get_claude_config_path(), data);
+		},
+		async preview_write_servers(location, servers) {
+			const before =
+				(await read_json_file(location.path)) ??
+				(location.scope === 'project' ? {} : { projects: {} });
+			const after = structuredClone(before);
+			const mcp_servers = portable_server_map(servers, 'disabled');
+
+			if (location.scope === 'project') {
+				after.mcpServers = mcp_servers;
+			} else if (location.scope === 'user') {
+				after.mcpServers = mcp_servers;
+			} else {
+				const projects =
+					after.projects &&
+					typeof after.projects === 'object' &&
+					!Array.isArray(after.projects)
+						? (after.projects as JsonObject)
+						: {};
+				const project_config =
+					projects[process.cwd()] &&
+					typeof projects[process.cwd()] === 'object' &&
+					!Array.isArray(projects[process.cwd()])
+						? (projects[process.cwd()] as JsonObject)
+						: {};
+				project_config.mcpServers = mcp_servers;
+				projects[process.cwd()] = project_config;
+				after.projects = projects;
+			}
+
+			return build_json_change_preview({
+				operation: 'profile-load',
+				client: 'claude-code',
+				scope: location.scope,
+				location: location.path,
+				before,
+				after,
+			});
 		},
 	},
 	create_json_adapter({
@@ -911,6 +1021,33 @@ export async function preview_set_client_enabled_servers(
 		enabled_names,
 	);
 	return adapter.previewEnabled(location, enabled_names);
+}
+
+export async function replace_client_servers(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	servers: PortableMcpServer[],
+): Promise<number> {
+	if (!adapter.write_servers) {
+		throw new Error(
+			`${adapter.label} support cannot replace server profiles yet.`,
+		);
+	}
+	await adapter.write_servers(location, servers);
+	return servers.length;
+}
+
+export async function preview_replace_client_servers(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	servers: PortableMcpServer[],
+): Promise<JsonChangePreview> {
+	if (!adapter.preview_write_servers) {
+		throw new Error(
+			`${adapter.label} support cannot preview profile application yet.`,
+		);
+	}
+	return adapter.preview_write_servers(location, servers);
 }
 
 export async function set_client_server_enabled(
