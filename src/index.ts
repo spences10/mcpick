@@ -18,11 +18,17 @@ import { manage_hooks } from './commands/manage-hooks.js';
 import { manage_marketplace } from './commands/manage-marketplace.js';
 import { manage_skills } from './commands/manage-skills.js';
 import { restore_config } from './commands/restore.js';
-import { client_adapters } from './core/client-config.js';
+import {
+	client_adapters,
+	type ClientConfigLocation,
+	type McpClientAdapter,
+} from './core/client-config.js';
 import {
 	apply_profile_to_claude,
+	apply_profile_to_client,
 	list_profiles,
 	save_current_claude_profile,
+	save_profile_for_client,
 } from './core/profile.js';
 import { MenuAction } from './types.js';
 
@@ -113,7 +119,46 @@ async function create_claude_profile(name: string): Promise<void> {
 	}
 }
 
-async function handle_load_claude_profile(): Promise<void> {
+async function select_client_adapter(): Promise<McpClientAdapter | null> {
+	const client_id = await select({
+		message: 'Which MCP client?',
+		options: client_adapters.map((adapter) => ({
+			value: adapter.id,
+			label: adapter.label,
+		})),
+		initialValue: 'claude-code',
+	});
+
+	if (isCancel(client_id)) return null;
+	return (
+		client_adapters.find((adapter) => adapter.id === client_id) ??
+		null
+	);
+}
+
+async function select_client_location(
+	adapter: McpClientAdapter,
+): Promise<ClientConfigLocation | null> {
+	const locations = adapter.locations();
+	if (locations.length === 1) return locations[0];
+
+	const location_path = await select({
+		message: `Which ${adapter.label} configuration?`,
+		options: locations.map((location) => ({
+			value: location.path,
+			label: `${location.scope} — ${location.description}`,
+			hint: location.path,
+		})),
+	});
+
+	if (isCancel(location_path)) return null;
+	return (
+		locations.find((location) => location.path === location_path) ??
+		null
+	);
+}
+
+async function handle_load_profile(): Promise<void> {
 	const profiles = await list_profiles();
 
 	if (profiles.length === 0) {
@@ -141,17 +186,29 @@ async function handle_load_claude_profile(): Promise<void> {
 
 	if (isCancel(profile_name)) return;
 
-	const result = await apply_profile_to_claude(profile_name);
+	const adapter = await select_client_adapter();
+	if (!adapter) return;
+	const location = await select_client_location(adapter);
+	if (!location) return;
+
+	const result = await apply_profile_to_client({
+		name: profile_name,
+		client: adapter.id,
+		scope: location.scope,
+		location: location.path,
+	});
 	const parts = [`${result.serverCount} servers`];
 	if (result.pluginCount > 0) {
-		parts.push(`${result.pluginCount} plugins`);
+		parts.push(`${result.pluginCount} Claude plugins`);
 	}
 	log.success(
-		`Profile '${result.profile}' applied (${parts.join(', ')})`,
+		`Profile '${result.profile}' applied to ${adapter.label}:${location.scope} (${parts.join(', ')})`,
 	);
+	if (result.location) log.info(`Config: ${result.location}`);
+	if (result.backup_path) log.info(`Backup: ${result.backup_path}`);
 }
 
-async function handle_save_claude_profile(): Promise<void> {
+async function handle_save_profile(): Promise<void> {
 	const name = await text({
 		message: 'Profile name:',
 		placeholder: 'e.g. database, web-dev, minimal',
@@ -167,14 +224,25 @@ async function handle_save_claude_profile(): Promise<void> {
 
 	if (isCancel(name)) return;
 
-	const result = await save_current_claude_profile(name);
+	const adapter = await select_client_adapter();
+	if (!adapter) return;
+	const location = await select_client_location(adapter);
+	if (!location) return;
+
+	const result = await save_profile_for_client({
+		name,
+		client: adapter.id,
+		scope: location.scope,
+		location: location.path,
+	});
 	const parts = [`${result.serverCount} servers`];
 	if (result.pluginCount > 0) {
-		parts.push(`${result.pluginCount} plugins`);
+		parts.push(`${result.pluginCount} Claude plugins`);
 	}
 	log.success(
-		`Profile '${result.profile}' saved (${parts.join(', ')})`,
+		`Profile '${result.profile}' saved from ${adapter.label}:${location.scope} (${parts.join(', ')})`,
 	);
+	if (result.location) log.info(`Config: ${result.location}`);
 }
 
 async function handle_client_tools(): Promise<void> {
@@ -293,13 +361,13 @@ async function main(): Promise<void> {
 					},
 					{
 						value: 'load-profile' as MenuAction,
-						label: 'Load Claude Code profile',
-						hint: 'Apply a saved Claude Code profile',
+						label: 'Load profile',
+						hint: 'Apply a saved profile to a selected client',
 					},
 					{
 						value: 'save-profile' as MenuAction,
-						label: 'Save Claude Code profile',
-						hint: 'Save current Claude Code config as profile',
+						label: 'Save profile',
+						hint: 'Save selected client config as a portable profile',
 					},
 					{
 						value: 'backup' as MenuAction,
@@ -341,10 +409,10 @@ async function main(): Promise<void> {
 					await restore_config();
 					break;
 				case 'load-profile':
-					await handle_load_claude_profile();
+					await handle_load_profile();
 					break;
 				case 'save-profile':
-					await handle_save_claude_profile();
+					await handle_save_profile();
 					break;
 				case 'exit':
 					outro('Goodbye!');
