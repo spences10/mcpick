@@ -10,6 +10,10 @@ import { add_server_to_registry } from '../../core/registry.js';
 import { validate_mcp_server } from '../../core/validation.js';
 import { McpScope } from '../../types.js';
 import { add_mcp_via_cli } from '../../utils/claude-cli.js';
+import {
+	claude_mutation_context,
+	print_mutation_details,
+} from '../mutation.js';
 import { error, output } from '../output.js';
 
 interface AddArgs {
@@ -140,13 +144,15 @@ export default defineCommand({
 
 		await add_server_to_registry(server);
 		const result = await add_mcp_via_cli(server, scope);
+		const mutation = claude_mutation_context('add', scope, [
+			server.name,
+		]);
 
 		if (add_args.json) {
 			output(
 				{
 					added: server.name,
-					client: 'claude-code',
-					scope,
+					...mutation,
 					cli: result.success,
 					error: result.error,
 				},
@@ -156,10 +162,12 @@ export default defineCommand({
 			console.log(
 				`Added '${server.name}' and enabled (scope: ${scope})`,
 			);
+			print_mutation_details(mutation);
 		} else {
 			console.log(
 				`Added '${server.name}' to registry but CLI failed: ${result.error}`,
 			);
+			print_mutation_details(mutation);
 		}
 	},
 });
@@ -210,21 +218,18 @@ async function add_to_client(
 			scope,
 			location_path,
 		);
-		await add_client_server(adapter, location, server);
+		const mutation = await add_client_server(
+			adapter,
+			location,
+			server,
+		);
 		if (json) {
-			output(
-				{
-					added: server.name,
-					client: adapter.id,
-					scope: location.scope,
-					location: location.path,
-				},
-				true,
-			);
+			output({ added: server.name, ...mutation }, true);
 		} else {
 			console.log(
 				`Added '${server.name}' (${adapter.id}:${location.scope})`,
 			);
+			print_mutation_details(mutation);
 		}
 	} catch (err) {
 		error(

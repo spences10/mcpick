@@ -2,7 +2,10 @@ import { access, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { get_claude_config_path } from '../utils/paths.js';
-import { safe_json_write } from '../utils/safe-apply.js';
+import {
+	safe_json_write,
+	type SafeJsonWriteResult,
+} from '../utils/safe-apply.js';
 
 export type McpClientId =
 	| 'claude-code'
@@ -46,24 +49,40 @@ export interface McpClientAdapter {
 	writeEnabled?: (
 		location: ClientConfigLocation,
 		enabled_names: string[],
-	) => Promise<void>;
+	) => Promise<SafeJsonWriteResult>;
 	write_server?: (
 		location: ClientConfigLocation,
 		server: PortableMcpServer,
-	) => Promise<void>;
+	) => Promise<SafeJsonWriteResult>;
 	write_server_config?: (
 		location: ClientConfigLocation,
 		name: string,
 		config: JsonObject,
-	) => Promise<void>;
+	) => Promise<SafeJsonWriteResult>;
 	remove_server?: (
 		location: ClientConfigLocation,
 		name: string,
-	) => Promise<void>;
+	) => Promise<SafeJsonWriteResult>;
 	write_servers?: (
 		location: ClientConfigLocation,
 		servers: PortableMcpServer[],
-	) => Promise<void>;
+	) => Promise<SafeJsonWriteResult>;
+}
+
+export interface ClientMutationResult {
+	operation:
+		| 'add'
+		| 'remove'
+		| 'enable'
+		| 'disable'
+		| 'set-enabled'
+		| 'replace';
+	client: McpClientId;
+	scope: McpClientScope;
+	location: string;
+	servers: string[];
+	enabledCount?: number;
+	backup_path?: string;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -114,8 +133,8 @@ async function read_json_file(
 async function write_json_file(
 	path: string,
 	data: JsonObject,
-): Promise<void> {
-	await safe_json_write(path, data, 2);
+): Promise<SafeJsonWriteResult> {
+	return safe_json_write(path, data, 2);
 }
 
 function parse_json_or_jsonc(content: string): unknown {
@@ -462,7 +481,7 @@ function create_json_adapter(options: {
 			}
 
 			data[options.serverKey] = servers;
-			await write_json_file(location.path, data);
+			return write_json_file(location.path, data);
 		},
 		async write_server(location, server) {
 			const data = (await read_json_file(location.path)) ?? {};
@@ -472,21 +491,21 @@ function create_json_adapter(options: {
 				options.disabledMode ?? 'disabled',
 			);
 			data[options.serverKey] = servers;
-			await write_json_file(location.path, data);
+			return write_json_file(location.path, data);
 		},
 		async write_server_config(location, name, config) {
 			const data = (await read_json_file(location.path)) ?? {};
 			const servers = get_server_record(data, options.serverKey);
 			servers[name] = config;
 			data[options.serverKey] = servers;
-			await write_json_file(location.path, data);
+			return write_json_file(location.path, data);
 		},
 		async remove_server(location, name) {
 			const data = (await read_json_file(location.path)) ?? {};
 			const servers = get_server_record(data, options.serverKey);
 			delete servers[name];
 			data[options.serverKey] = servers;
-			await write_json_file(location.path, data);
+			return write_json_file(location.path, data);
 		},
 		async write_servers(location, servers) {
 			const data = (await read_json_file(location.path)) ?? {};
@@ -494,7 +513,7 @@ function create_json_adapter(options: {
 				servers,
 				options.disabledMode ?? 'disabled',
 			);
-			await write_json_file(location.path, data);
+			return write_json_file(location.path, data);
 		},
 	};
 }
@@ -582,14 +601,12 @@ export const client_adapters: McpClientAdapter[] = [
 
 			if (location.scope === 'project') {
 				data.mcpServers = mcp_servers;
-				await write_json_file(location.path, data);
-				return;
+				return write_json_file(location.path, data);
 			}
 
 			if (location.scope === 'user') {
 				data.mcpServers = mcp_servers;
-				await write_json_file(get_claude_config_path(), data);
-				return;
+				return write_json_file(get_claude_config_path(), data);
 			}
 
 			const projects =
@@ -607,7 +624,7 @@ export const client_adapters: McpClientAdapter[] = [
 			project_config.mcpServers = mcp_servers;
 			projects[process.cwd()] = project_config;
 			data.projects = projects;
-			await write_json_file(get_claude_config_path(), data);
+			return write_json_file(get_claude_config_path(), data);
 		},
 	},
 	create_json_adapter({
@@ -721,6 +738,27 @@ export function get_client_adapter(
 	return client_adapters.find((adapter) => adapter.id === id) ?? null;
 }
 
+function mutation_result(
+	adapter: McpClientAdapter,
+	location: ClientConfigLocation,
+	operation: ClientMutationResult['operation'],
+	servers: string[],
+	write_result: SafeJsonWriteResult,
+	enabledCount?: number,
+): ClientMutationResult {
+	return {
+		operation,
+		client: adapter.id,
+		scope: location.scope,
+		location: write_result.path,
+		servers,
+		...(enabledCount !== undefined ? { enabledCount } : {}),
+		...(write_result.backup_path
+			? { backup_path: write_result.backup_path }
+			: {}),
+	};
+}
+
 export function resolve_client_location(
 	adapter: McpClientAdapter,
 	scope?: McpClientScope,
@@ -757,13 +795,20 @@ export async function add_client_server(
 	adapter: McpClientAdapter,
 	location: ClientConfigLocation,
 	server: PortableMcpServer,
-): Promise<void> {
+): Promise<ClientMutationResult> {
 	if (!adapter.write_server) {
 		throw new Error(
 			`${adapter.label} support cannot add servers yet.`,
 		);
 	}
-	await adapter.write_server(location, server);
+	const write_result = await adapter.write_server(location, server);
+	return mutation_result(
+		adapter,
+		location,
+		'add',
+		[server.name],
+		write_result,
+	);
 }
 
 export async function add_client_server_config(
@@ -771,33 +816,54 @@ export async function add_client_server_config(
 	location: ClientConfigLocation,
 	name: string,
 	config: JsonObject,
-): Promise<void> {
+): Promise<ClientMutationResult> {
 	if (!adapter.write_server_config) {
 		throw new Error(
 			`${adapter.label} support cannot add servers yet.`,
 		);
 	}
-	await adapter.write_server_config(location, name, config);
+	const write_result = await adapter.write_server_config(
+		location,
+		name,
+		config,
+	);
+	return mutation_result(
+		adapter,
+		location,
+		'add',
+		[name],
+		write_result,
+	);
 }
 
 export async function remove_client_server(
 	adapter: McpClientAdapter,
 	location: ClientConfigLocation,
 	server_name: string,
-): Promise<void> {
+): Promise<ClientMutationResult> {
 	if (!adapter.remove_server) {
 		throw new Error(
 			`${adapter.label} support cannot remove servers yet.`,
 		);
 	}
-	await adapter.remove_server(location, server_name);
+	const write_result = await adapter.remove_server(
+		location,
+		server_name,
+	);
+	return mutation_result(
+		adapter,
+		location,
+		'remove',
+		[server_name],
+		write_result,
+	);
 }
 
 export async function set_client_enabled_servers(
 	adapter: McpClientAdapter,
 	location: ClientConfigLocation,
 	enabled_names: string[],
-): Promise<number> {
+): Promise<ClientMutationResult> {
 	if (!adapter.writeEnabled) {
 		throw new Error(`${adapter.label} support is read-only.`);
 	}
@@ -813,22 +879,39 @@ export async function set_client_enabled_servers(
 		);
 	}
 
-	await adapter.writeEnabled(location, enabled_names);
-	return enabled_names.length;
+	const write_result = await adapter.writeEnabled(
+		location,
+		enabled_names,
+	);
+	return mutation_result(
+		adapter,
+		location,
+		'set-enabled',
+		enabled_names,
+		write_result,
+		enabled_names.length,
+	);
 }
 
 export async function replace_client_servers(
 	adapter: McpClientAdapter,
 	location: ClientConfigLocation,
 	servers: PortableMcpServer[],
-): Promise<number> {
+): Promise<ClientMutationResult> {
 	if (!adapter.write_servers) {
 		throw new Error(
 			`${adapter.label} support cannot replace server profiles yet.`,
 		);
 	}
-	await adapter.write_servers(location, servers);
-	return servers.length;
+	const write_result = await adapter.write_servers(location, servers);
+	return mutation_result(
+		adapter,
+		location,
+		'replace',
+		servers.map((server) => server.name),
+		write_result,
+		servers.filter((server) => server.disabled !== true).length,
+	);
 }
 
 export async function set_client_server_enabled(
@@ -836,7 +919,7 @@ export async function set_client_server_enabled(
 	location: ClientConfigLocation,
 	server_name: string,
 	enabled: boolean,
-): Promise<number> {
+): Promise<ClientMutationResult> {
 	const servers = await adapter.readLocation(location);
 	const server = servers.find(
 		(candidate) => candidate.name === server_name,
@@ -858,9 +941,14 @@ export async function set_client_server_enabled(
 		enabled_names.delete(server.name);
 	}
 
-	return set_client_enabled_servers(adapter, location, [
+	const result = await set_client_enabled_servers(adapter, location, [
 		...enabled_names,
 	]);
+	return {
+		...result,
+		operation: enabled ? 'enable' : 'disable',
+		servers: [server_name],
+	};
 }
 
 export async function list_client_locations(): Promise<

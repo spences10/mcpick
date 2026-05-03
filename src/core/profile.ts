@@ -51,6 +51,7 @@ export interface ProfileApplyResult {
 	client?: string;
 	scope?: string;
 	location?: string;
+	backup_path?: string;
 }
 
 export interface ProfileSaveResult {
@@ -279,7 +280,11 @@ export async function apply_profile_to_client(input: {
 		input.location,
 	);
 	const profile = await load_portable_profile(input.name);
-	await replace_client_servers(adapter, location, profile.servers);
+	const mutation = await replace_client_servers(
+		adapter,
+		location,
+		profile.servers,
+	);
 
 	let pluginCount = 0;
 	if (adapter.id === 'claude-code' && profile.plugins) {
@@ -293,7 +298,10 @@ export async function apply_profile_to_client(input: {
 		pluginCount,
 		client: adapter.id,
 		scope: location.scope,
-		location: location.path,
+		location: mutation.location,
+		...(mutation.backup_path
+			? { backup_path: mutation.backup_path }
+			: {}),
 	};
 }
 

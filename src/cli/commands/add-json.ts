@@ -7,6 +7,10 @@ import {
 } from '../../core/client-config.js';
 import { McpScope } from '../../types.js';
 import { mcp_add_json_via_cli } from '../../utils/claude-cli.js';
+import {
+	claude_mutation_context,
+	print_mutation_details,
+} from '../mutation.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -86,13 +90,15 @@ export default defineCommand({
 			args.config,
 			scope,
 		);
+		const mutation = claude_mutation_context('add', scope, [
+			args.name,
+		]);
 
 		if (args.json) {
 			output(
 				{
 					added: args.name,
-					client: 'claude-code',
-					scope,
+					...mutation,
 					success: result.success,
 					error: result.error,
 				},
@@ -100,6 +106,7 @@ export default defineCommand({
 			);
 		} else if (result.success) {
 			console.log(`Added '${args.name}' from JSON (scope: ${scope})`);
+			print_mutation_details(mutation);
 		} else {
 			error(result.error || 'Unknown error');
 		}
@@ -130,21 +137,19 @@ async function add_json_to_client(
 			scope,
 			location_path,
 		);
-		await add_client_server_config(adapter, location, name, config);
+		const mutation = await add_client_server_config(
+			adapter,
+			location,
+			name,
+			config,
+		);
 		if (json) {
-			output(
-				{
-					added: name,
-					client: adapter.id,
-					scope: location.scope,
-					location: location.path,
-				},
-				true,
-			);
+			output({ added: name, ...mutation }, true);
 		} else {
 			console.log(
 				`Added '${name}' from JSON (${adapter.id}:${location.scope})`,
 			);
+			print_mutation_details(mutation);
 		}
 	} catch (err) {
 		error(

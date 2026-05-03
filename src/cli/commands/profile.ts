@@ -11,6 +11,7 @@ import {
 	save_current_claude_profile,
 	save_profile_for_client,
 } from '../../core/profile.js';
+import { print_mutation_details } from '../mutation.js';
 import { error, output } from '../output.js';
 
 const CLIENTS =
@@ -104,6 +105,7 @@ const load = defineCommand({
 					console.log(
 						`Profile '${result.profile}' applied to ${result.client}:${result.scope} (${result.serverCount} servers)`,
 					);
+					print_mutation_details(result);
 				}
 				return;
 			}

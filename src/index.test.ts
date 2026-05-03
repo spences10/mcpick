@@ -249,7 +249,11 @@ describe('CLI subprocess integration', () => {
 			}),
 		);
 
-		parse_json(
+		const mutation = parse_json<{
+			operation: string;
+			location: string;
+			backup_path: string;
+		}>(
 			await run_cli(ctx, [
 				'add-json',
 				'next',
@@ -261,6 +265,11 @@ describe('CLI subprocess integration', () => {
 				'--json',
 			]),
 		);
+		expect(mutation).toMatchObject({
+			operation: 'add',
+			location: configPath,
+		});
+		expect(mutation.backup_path).toContain('config-mcp.json');
 
 		const backups = parse_json<Array<{ original_path: string }>>(
 			await run_cli(ctx, ['rollback', '--list', '--json']),

@@ -12,6 +12,10 @@ import {
 } from '../../core/registry.js';
 import { McpScope } from '../../types.js';
 import { remove_mcp_via_cli } from '../../utils/claude-cli.js';
+import {
+	claude_mutation_context,
+	print_mutation_details,
+} from '../mutation.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -83,14 +87,15 @@ export default defineCommand({
 		}
 
 		await remove_mcp_via_cli(args.server, scope);
+		const mutation = claude_mutation_context('remove', scope, [
+			args.server,
+		]);
 
 		if (args.json) {
-			output(
-				{ removed: args.server, client: 'claude-code', scope },
-				true,
-			);
+			output({ removed: args.server, ...mutation }, true);
 		} else {
 			console.log(`Removed '${args.server}'`);
+			print_mutation_details(mutation);
 		}
 	},
 });
@@ -118,21 +123,18 @@ async function remove_from_client(
 			scope,
 			location_path,
 		);
-		await remove_client_server(adapter, location, server);
+		const mutation = await remove_client_server(
+			adapter,
+			location,
+			server,
+		);
 		if (json) {
-			output(
-				{
-					removed: server,
-					client: adapter.id,
-					scope: location.scope,
-					location: location.path,
-				},
-				true,
-			);
+			output({ removed: server, ...mutation }, true);
 		} else {
 			console.log(
 				`Removed '${server}' (${adapter.id}:${location.scope})`,
 			);
+			print_mutation_details(mutation);
 		}
 	} catch (err) {
 		error(

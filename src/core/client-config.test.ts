@@ -272,14 +272,22 @@ describe('client adapters', () => {
 
 		const adapter = get_client_adapter('vscode');
 		expect(adapter).not.toBeNull();
-		const enabled_count = await set_client_enabled_servers(
+		const mutation = await set_client_enabled_servers(
 			adapter!,
 			adapter!.locations()[0],
 			['filesystem'],
 		);
 
 		const written = JSON.parse(await readFile(config_path, 'utf-8'));
-		expect(enabled_count).toBe(1);
+		expect(mutation).toMatchObject({
+			operation: 'set-enabled',
+			client: 'vscode',
+			scope: 'project',
+			location: config_path,
+			servers: ['filesystem'],
+			enabledCount: 1,
+		});
+		expect(mutation.backup_path).toBeDefined();
 		expect(written.servers.memory.disabled).toBe(true);
 		expect(written.servers.filesystem.disabled).toBe(false);
 	});

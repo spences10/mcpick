@@ -8,6 +8,10 @@ import {
 import { get_all_available_servers } from '../../core/registry.js';
 import { McpScope } from '../../types.js';
 import { add_mcp_via_cli } from '../../utils/claude-cli.js';
+import {
+	claude_mutation_context,
+	print_mutation_details,
+} from '../mutation.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -73,14 +77,15 @@ export default defineCommand({
 		if (!result.success) {
 			error(result.error || 'Failed to enable server');
 		}
+		const mutation = claude_mutation_context('enable', scope, [
+			server.name,
+		]);
 
 		if (args.json) {
-			output(
-				{ enabled: server.name, client: 'claude-code', scope },
-				true,
-			);
+			output({ enabled: server.name, ...mutation }, true);
 		} else {
 			console.log(`Enabled '${server.name}' (scope: ${scope})`);
+			print_mutation_details(mutation);
 		}
 	},
 });
@@ -108,27 +113,19 @@ async function enable_client_server(
 			scope,
 			location_path,
 		);
-		const enabled_count = await set_client_server_enabled(
+		const mutation = await set_client_server_enabled(
 			adapter,
 			location,
 			server,
 			true,
 		);
 		if (json) {
-			output(
-				{
-					enabled: server,
-					client: adapter.id,
-					scope: location.scope,
-					location: location.path,
-					enabledCount: enabled_count,
-				},
-				true,
-			);
+			output({ enabled: server, ...mutation }, true);
 		} else {
 			console.log(
 				`Enabled '${server}' (${adapter.id}:${location.scope})`,
 			);
+			print_mutation_details(mutation);
 		}
 	} catch (err) {
 		error(

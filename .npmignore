@@ -13,6 +13,7 @@ tsconfig.json
 .git/
 .gitignore
 .vscode/
+.zed/
 renovate.json
 
 # Source maps (optional - remove if you want to include them)
