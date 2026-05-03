@@ -2,18 +2,12 @@ import { defineCommand } from 'citty';
 import {
 	get_client_adapter,
 	McpClientScope,
-	preview_set_client_enabled_servers,
 	resolve_client_location,
 	set_client_server_enabled,
 } from '../../core/client-config.js';
 import { get_all_available_servers } from '../../core/registry.js';
 import { McpScope } from '../../types.js';
-import {
-	add_mcp_via_cli,
-	build_add_args,
-} from '../../utils/claude-cli.js';
-import { build_command_preview } from '../../utils/config-preview.js';
-import { print_dry_run } from '../dry-run.js';
+import { add_mcp_via_cli } from '../../utils/claude-cli.js';
 import { error, output } from '../output.js';
 
 export default defineCommand({
@@ -43,11 +37,6 @@ export default defineCommand({
 			description:
 				'Exact config path when a client has multiple matching locations',
 		},
-		dryRun: {
-			type: 'boolean',
-			description: 'Preview changes without writing',
-			default: false,
-		},
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -62,7 +51,6 @@ export default defineCommand({
 				args.scope as McpClientScope | undefined,
 				args.location,
 				args.json,
-				args.dryRun,
 			);
 			return;
 		}
@@ -79,20 +67,6 @@ export default defineCommand({
 			error(
 				`Server '${args.server}' not found in registry. Run 'mcpick list' to see available servers.`,
 			);
-		}
-
-		if (args.dryRun) {
-			print_dry_run(
-				build_command_preview({
-					operation: 'enable-server',
-					client: 'claude-code',
-					scope,
-					location: 'Claude Code CLI',
-					command: ['claude', ...build_add_args(server, scope)],
-				}),
-				args.json,
-			);
-			return;
 		}
 
 		const result = await add_mcp_via_cli(server, scope);
@@ -117,7 +91,6 @@ async function enable_client_server(
 	scope: McpClientScope | undefined,
 	location_path: string | undefined,
 	json: boolean,
-	dry_run: boolean,
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -135,24 +108,6 @@ async function enable_client_server(
 			scope,
 			location_path,
 		);
-		const servers = await adapter.readLocation(location);
-		const enabled_names = new Set(
-			servers
-				.filter((candidate) => candidate.disabled !== true)
-				.map((candidate) => candidate.name),
-		);
-		enabled_names.add(server);
-
-		if (dry_run) {
-			print_dry_run(
-				await preview_set_client_enabled_servers(adapter, location, [
-					...enabled_names,
-				]),
-				json,
-			);
-			return;
-		}
-
 		const enabled_count = await set_client_server_enabled(
 			adapter,
 			location,

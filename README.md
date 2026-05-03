@@ -152,7 +152,7 @@ npx mcpick --list-profiles
 
 # Save/load profiles for a specific MCP client
 npx mcpick profile save work --client vscode --scope project
-npx mcpick profile load work --client opencode --scope project --dry-run
+npx mcpick profile load work --client opencode --scope project
 npx mcpick profile load work --client pi --scope user
 
 npx mcpick backup

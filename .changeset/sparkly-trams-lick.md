@@ -2,5 +2,4 @@
 'mcpick': patch
 ---
 
-Save and apply portable MCP profiles across client adapters with
-dry-run preview support.
+Save and apply portable MCP profiles across client adapters.

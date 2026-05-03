@@ -13,9 +13,6 @@ import {
 	get_client_adapter,
 	list_client_locations,
 	normalize_mcp_server,
-	preview_add_client_server,
-	preview_remove_client_server,
-	preview_set_client_enabled_servers,
 	remove_client_server,
 	resolve_client_location,
 	set_client_enabled_servers,
@@ -257,52 +254,6 @@ describe('client adapters', () => {
 		expect(written.mcp.everything.enabled).toBe(false);
 		expect(written.mcp.everything.disabled).toBeUndefined();
 		expect(written.mcp.sentry.enabled).toBe(true);
-	});
-
-	it('previews JSON client mutations without writing', async () => {
-		const dir = await temp_project();
-		await mkdir(join(dir, '.vscode'), { recursive: true });
-		const config_path = join(dir, '.vscode/mcp.json');
-		await writeFile(
-			config_path,
-			JSON.stringify({
-				servers: {
-					memory: { command: 'npx', args: ['memory'] },
-				},
-			}),
-		);
-		const before = await readFile(config_path, 'utf-8');
-
-		const adapter = get_client_adapter('vscode');
-		expect(adapter).not.toBeNull();
-		const location = resolve_client_location(adapter!, 'project');
-		const add_preview = await preview_add_client_server(
-			adapter!,
-			location,
-			{
-				name: 'remote',
-				transport: 'http',
-				url: 'https://example.com/mcp?token=secret',
-				headers: { Authorization: 'Bearer secret' },
-			},
-		);
-		const toggle_preview = await preview_set_client_enabled_servers(
-			adapter!,
-			location,
-			[],
-		);
-		const remove_preview = await preview_remove_client_server(
-			adapter!,
-			location,
-			'memory',
-		);
-
-		expect(await readFile(config_path, 'utf-8')).toBe(before);
-		expect(add_preview.diff).toContain('remote');
-		expect(JSON.stringify(add_preview.after)).toContain('***');
-		expect(JSON.stringify(add_preview.after)).not.toContain('secret');
-		expect(toggle_preview.diff).toContain('disabled');
-		expect(remove_preview.diff).toContain('memory');
 	});
 
 	it('sets enabled servers through the shared adapter service', async () => {

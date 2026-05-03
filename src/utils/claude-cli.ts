@@ -708,14 +708,6 @@ export async function mcp_get_via_cli(
 /**
  * Add an MCP server from raw JSON via Claude CLI
  */
-export function build_add_json_args(
-	name: string,
-	json: string,
-	scope: McpScope = 'local',
-): string[] {
-	return ['mcp', 'add-json', name, json, '--scope', scope];
-}
-
 export async function mcp_add_json_via_cli(
 	name: string,
 	json: string,
@@ -730,7 +722,14 @@ export async function mcp_add_json_via_cli(
 	}
 
 	try {
-		await run_claude(build_add_json_args(name, json, scope));
+		await run_claude([
+			'mcp',
+			'add-json',
+			name,
+			json,
+			'--scope',
+			scope,
+		]);
 		return { success: true };
 	} catch (error) {
 		const message = get_redacted_error_message(error);
