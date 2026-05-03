@@ -15,8 +15,34 @@ export interface ClaudeConfig {
 	};
 }
 
+export type McpClientId =
+	| 'claude-code'
+	| 'gemini-cli'
+	| 'vscode'
+	| 'cursor'
+	| 'windsurf'
+	| 'opencode'
+	| 'pi';
+
+export type McpClientScope = 'local' | 'project' | 'user';
+export type McpTransport = 'stdio' | 'http' | 'sse';
+
+export interface PortableMcpServer {
+	name: string;
+	transport: McpTransport;
+	command?: string;
+	args?: string[];
+	url?: string;
+	env?: Record<string, string>;
+	headers?: Record<string, string>;
+	description?: string;
+	disabled?: boolean;
+	client_options?: Record<string, unknown>;
+}
+
 export interface ServerRegistry {
-	servers: McpServer[];
+	version: 3;
+	servers: PortableMcpServer[];
 }
 
 export interface BackupInfo {

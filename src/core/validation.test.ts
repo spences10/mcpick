@@ -77,18 +77,22 @@ describe('validate_claude_config', () => {
 });
 
 describe('validate_server_registry', () => {
-	it('validates registry with servers', () => {
+	it('validates registry with portable servers', () => {
 		const result = validate_server_registry({
+			version: 3,
 			servers: [
-				{ name: 'a', command: 'node' },
-				{ name: 'b', type: 'sse', url: 'https://x.com' },
+				{ name: 'a', transport: 'stdio', command: 'node' },
+				{ name: 'b', transport: 'sse', url: 'https://x.com' },
 			],
 		});
 		expect(result.servers).toHaveLength(2);
 	});
 
 	it('validates empty registry', () => {
-		const result = validate_server_registry({ servers: [] });
+		const result = validate_server_registry({
+			version: 3,
+			servers: [],
+		});
 		expect(result.servers).toEqual([]);
 	});
 

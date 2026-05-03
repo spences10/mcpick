@@ -43,8 +43,26 @@ export const claude_config_schema = v.object({
 	),
 });
 
+export const portable_mcp_server_schema = v.object({
+	name: v.pipe(v.string(), v.minLength(1)),
+	transport: v.union([
+		v.literal('stdio'),
+		v.literal('http'),
+		v.literal('sse'),
+	]),
+	command: v.optional(v.string()),
+	args: v.optional(v.array(v.string())),
+	url: v.optional(v.string()),
+	env: v.optional(v.record(v.string(), v.string())),
+	headers: v.optional(v.record(v.string(), v.string())),
+	description: v.optional(v.string()),
+	disabled: v.optional(v.boolean()),
+	client_options: v.optional(v.record(v.string(), v.unknown())),
+});
+
 export const server_registry_schema = v.object({
-	servers: v.array(mcp_server_schema),
+	version: v.literal(3),
+	servers: v.array(portable_mcp_server_schema),
 });
 
 export function validate_mcp_server(data: unknown) {
