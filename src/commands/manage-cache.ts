@@ -93,6 +93,11 @@ async function handle_clear(): Promise<void> {
 	for (const key of result.cleared) {
 		log.success(`Cleared: ${key}`);
 	}
+	if (result.redisabledHooks?.success) {
+		log.success(
+			`Re-disabled restored hooks: ${result.redisabledHooks.success}`,
+		);
+	}
 	for (const err of result.errors) {
 		log.error(`Error: ${err}`);
 	}

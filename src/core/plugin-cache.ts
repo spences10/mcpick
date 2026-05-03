@@ -22,6 +22,10 @@ import type {
 } from '../types.js';
 import { atomic_json_write } from '../utils/atomic-write.js';
 import {
+	check_restored_hooks,
+	redisable_restored_hooks,
+} from './hook-state.js';
+import {
 	ensure_directory_exists,
 	get_installed_plugins_path,
 	get_known_marketplaces_path,
@@ -359,13 +363,18 @@ function is_safe_cache_path(path: string): boolean {
 	return target.startsWith(cache_dir + '/');
 }
 
-export async function clear_plugin_caches(
-	keys: string[],
-): Promise<{ cleared: string[]; errors: string[] }> {
+export async function clear_plugin_caches(keys: string[]): Promise<{
+	cleared: string[];
+	errors: string[];
+	redisabledHooks?: { success: number; failed: number };
+}> {
 	const installed = await read_installed_plugins();
 	const marketplaces = await read_known_marketplaces();
 	const cleared: string[] = [];
 	const errors: string[] = [];
+	let redisabledHooks:
+		| { success: number; failed: number }
+		| undefined;
 
 	// Collect unique marketplaces to refresh
 	const marketplace_names = new Set<string>();
@@ -382,6 +391,16 @@ export async function clear_plugin_caches(
 			if (!result.success) {
 				errors.push(`Marketplace refresh failed: ${result.error}`);
 			}
+		}
+	}
+
+	const restored_hooks = await check_restored_hooks();
+	if (restored_hooks.length > 0) {
+		redisabledHooks = await redisable_restored_hooks(restored_hooks);
+		if (redisabledHooks.failed > 0) {
+			errors.push(
+				`Failed to re-disable ${redisabledHooks.failed} restored hook(s).`,
+			);
 		}
 	}
 
@@ -413,7 +432,11 @@ export async function clear_plugin_caches(
 	// Write back updated installed_plugins.json
 	await write_installed_plugins(installed);
 
-	return { cleared, errors };
+	return {
+		cleared,
+		errors,
+		...(redisabledHooks ? { redisabledHooks } : {}),
+	};
 }
 
 // --- Orphaned cleanup ---

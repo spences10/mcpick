@@ -133,6 +133,11 @@ const clear = defineCommand({
 			for (const key of result.cleared) {
 				console.log(`Cleared: ${key}`);
 			}
+			if (result.redisabledHooks?.success) {
+				console.log(
+					`Re-disabled restored hooks: ${result.redisabledHooks.success}`,
+				);
+			}
 			for (const err of result.errors) {
 				console.error(`Error: ${err}`);
 			}
