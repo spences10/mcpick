@@ -1,5 +1,26 @@
 # mcpick
 
+## 0.0.25
+
+### Patch Changes
+
+- dd735be: Migrate server registry storage to portable versioned MCP
+  server entries with legacy compatibility.
+- 0a6cc35: Add subprocess integration coverage for built CLI routing,
+  mutations, rollback, errors, and redaction.
+- efed902: Remove unsupported dry-run functionality and reframe
+  mutation safety around observability and rollback metadata.
+- 6adad04: Preserve disabled plugin hooks during cache clear by
+  re-disabling restored marketplace hook definitions.
+- 6ff5070: Align TUI client picker defaults with reverse-sorted
+  visible client ordering across flows.
+- d723e32: Improve mutation output with config paths, backup metadata,
+  and structured adapter write results.
+- 9f366cf: Save and apply portable MCP profiles across client
+  adapters.
+- b2131bd: Align interactive profile load and save flows with
+  adapter-backed portable client profile services.
+
 ## 0.0.24
 
 ### Patch Changes
