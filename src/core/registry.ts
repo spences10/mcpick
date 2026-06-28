@@ -14,6 +14,7 @@ import {
 	get_server_registry_path,
 } from '../utils/paths.js';
 import { normalize_mcp_server } from './client-config.js';
+import { get_enabled_servers, read_claude_config } from './config.js';
 import {
 	validate_mcp_server,
 	validate_server_registry,
@@ -145,8 +146,6 @@ export async function add_server_to_registry(
 export async function get_all_available_servers(): Promise<
 	McpServer[]
 > {
-	const { get_enabled_servers, read_claude_config } =
-		await import('./config.js');
 	const registry = await read_server_registry();
 	const config = await read_claude_config();
 	const config_servers = get_enabled_servers(config);

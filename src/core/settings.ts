@@ -7,7 +7,11 @@ import {
 	HookMatcher,
 } from '../types.js';
 import { atomic_json_write } from '../utils/atomic-write.js';
-import { get_claude_settings_path } from '../utils/paths.js';
+import {
+	get_claude_settings_path,
+	get_marketplaces_dir,
+} from '../utils/paths.js';
+import { read_installed_plugins } from './plugin-cache.js';
 
 export async function read_claude_settings(): Promise<ClaudeSettings> {
 	const settings_path = get_claude_settings_path();
@@ -178,9 +182,6 @@ export async function get_all_hooks(): Promise<FlatHookEntry[]> {
 export async function get_all_plugin_hooks(): Promise<
 	FlatHookEntry[]
 > {
-	const { read_installed_plugins } =
-		await import('./plugin-cache.js');
-	const { get_marketplaces_dir } = await import('../utils/paths.js');
 	const installed = await read_installed_plugins();
 	const entries: FlatHookEntry[] = [];
 	const seen_hooks = new Set<string>();
