@@ -327,7 +327,7 @@ describe('client adapters', () => {
 		});
 	});
 
-	it('adds OpenCode servers with enabled flags', async () => {
+	it('adds OpenCode servers in OpenCode schema format', async () => {
 		const dir = await temp_project();
 		const config_path = join(dir, 'opencode.json');
 		const adapter = get_client_adapter('opencode');
@@ -338,14 +338,30 @@ describe('client adapters', () => {
 			name: 'sentry',
 			transport: 'http',
 			url: 'https://mcp.example',
+			headers: { Authorization: 'Bearer token' },
 			disabled: false,
+		});
+		await add_client_server(adapter!, location, {
+			name: 'sqlite',
+			transport: 'stdio',
+			command: 'npx',
+			args: ['-y', 'mcp-sqlite'],
+			env: { DATABASE_URL: 'sqlite://test.db' },
+			disabled: true,
 		});
 
 		const written = JSON.parse(await readFile(config_path, 'utf-8'));
 		expect(written.mcp.sentry).toEqual({
-			type: 'http',
+			type: 'remote',
 			url: 'https://mcp.example',
+			headers: { Authorization: 'Bearer token' },
 			enabled: true,
+		});
+		expect(written.mcp.sqlite).toEqual({
+			type: 'local',
+			command: ['npx', '-y', 'mcp-sqlite'],
+			environment: { DATABASE_URL: 'sqlite://test.db' },
+			enabled: false,
 		});
 	});
 

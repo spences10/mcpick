@@ -410,15 +410,50 @@ function portable_to_json(
 	return result;
 }
 
+type ServerSerializer = (
+	server: PortableMcpServer,
+	mode: 'disabled' | 'enabled',
+) => JsonObject;
+
+function opencode_to_json(server: PortableMcpServer): JsonObject {
+	const result: JsonObject = {};
+	const allowed_options =
+		server.transport === 'stdio'
+			? new Set(['cwd', 'timeout'])
+			: new Set(['oauth', 'timeout']);
+
+	for (const [key, value] of Object.entries(
+		server.client_options ?? {},
+	)) {
+		if (allowed_options.has(key)) result[key] = value;
+	}
+
+	if (server.transport === 'stdio') {
+		result.type = 'local';
+		if (server.command) {
+			result.command = [server.command, ...(server.args ?? [])];
+		}
+		if (server.env) result.environment = server.env;
+	} else {
+		result.type = 'remote';
+		if (server.url) result.url = server.url;
+		if (server.headers) result.headers = server.headers;
+	}
+
+	if (typeof server.disabled === 'boolean') {
+		result.enabled = !server.disabled;
+	}
+
+	return result;
+}
+
 function portable_server_map(
 	servers: PortableMcpServer[],
 	mode: 'disabled' | 'enabled',
+	serialize: ServerSerializer = portable_to_json,
 ): Record<string, JsonObject> {
 	return Object.fromEntries(
-		servers.map((server) => [
-			server.name,
-			portable_to_json(server, mode),
-		]),
+		servers.map((server) => [server.name, serialize(server, mode)]),
 	);
 }
 
@@ -427,6 +462,7 @@ function create_json_adapter(options: {
 	label: string;
 	serverKey: 'mcpServers' | 'servers' | 'mcp';
 	disabledMode?: 'disabled' | 'enabled';
+	serialize?: ServerSerializer;
 	locations: () => ClientConfigLocation[];
 }): McpClientAdapter {
 	return {
@@ -474,7 +510,7 @@ function create_json_adapter(options: {
 		async write_server(location, server) {
 			const data = (await read_json_file(location.path)) ?? {};
 			const servers = get_server_record(data, options.serverKey);
-			servers[server.name] = portable_to_json(
+			servers[server.name] = (options.serialize ?? portable_to_json)(
 				server,
 				options.disabledMode ?? 'disabled',
 			);
@@ -500,6 +536,7 @@ function create_json_adapter(options: {
 			data[options.serverKey] = portable_server_map(
 				servers,
 				options.disabledMode ?? 'disabled',
+				options.serialize,
 			);
 			return write_json_file(location.path, data);
 		},
@@ -678,6 +715,7 @@ export const client_adapters: McpClientAdapter[] = [
 		label: 'OpenCode',
 		serverKey: 'mcp',
 		disabledMode: 'enabled',
+		serialize: opencode_to_json,
 		locations: () => [
 			{
 				scope: 'project',

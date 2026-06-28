@@ -177,4 +177,48 @@ describe('profile services', () => {
 			).servers[0].name,
 		).toBe('memory');
 	});
+
+	it('applies portable profiles to OpenCode using OpenCode schema', async () => {
+		await temp_claude_dir();
+		const project_dir = await mkdtemp(
+			join(tmpdir(), 'mcpick-profile-opencode-'),
+		);
+		process.chdir(project_dir);
+		await writeFile(
+			join(project_dir, 'opencode.json'),
+			JSON.stringify({
+				mcp: {
+					sqlite: {
+						type: 'local',
+						command: ['npx', '-y', 'mcp-sqlite'],
+						environment: { DATABASE_URL: 'sqlite://test.db' },
+					},
+				},
+			}),
+		);
+
+		await save_profile_for_client({
+			name: 'opencode-work',
+			client: 'opencode',
+			scope: 'project',
+		});
+		await writeFile(
+			join(project_dir, 'opencode.json'),
+			JSON.stringify({ mcp: {} }),
+		);
+		await apply_profile_to_client({
+			name: 'opencode-work',
+			client: 'opencode',
+			scope: 'project',
+		});
+
+		const written = JSON.parse(
+			await readFile(join(project_dir, 'opencode.json'), 'utf-8'),
+		);
+		expect(written.mcp.sqlite).toEqual({
+			type: 'local',
+			command: ['npx', '-y', 'mcp-sqlite'],
+			environment: { DATABASE_URL: 'sqlite://test.db' },
+		});
+	});
 });
