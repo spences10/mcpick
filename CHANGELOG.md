@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.0.26
+
+### Patch Changes
+
+- a991d53: Fix OpenCode MCP config serialization to match schema for
+  local, remote, environment, and profile writes.
+
 ## 0.0.25
 
 ### Patch Changes
