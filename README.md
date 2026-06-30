@@ -107,6 +107,9 @@ npx mcpick skills add spences10/skills --list
 # Install one skill
 npx mcpick skills add spences10/skills --agent pi --skill svelte-runes --yes
 
+# Install a single-source social automation skill
+npx mcpick skills add Xquik-dev/hermes-tweet --agent claude-code --skill hermes-tweet --yes
+
 # Install all skills for a client globally
 npx mcpick skills add spences10/skills --agent opencode --skill '*' --global --yes
 
