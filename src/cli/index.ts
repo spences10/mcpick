@@ -14,6 +14,8 @@ const main = defineCommand({
 			import('./commands/disable.js').then((m) => m.default),
 		clients: () =>
 			import('./commands/clients.js').then((m) => m.default),
+		doctor: () =>
+			import('./commands/doctor.js').then((m) => m.default),
 		remove: () =>
 			import('./commands/remove.js').then((m) => m.default),
 		add: () => import('./commands/add.js').then((m) => m.default),
