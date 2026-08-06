@@ -11,6 +11,12 @@ import { validate_mcp_server } from '../../core/validation.js';
 import { McpScope } from '../../types.js';
 import { add_mcp_via_cli } from '../../utils/claude-cli.js';
 import {
+	collect_config_warnings,
+	ConfigWarning,
+	emit_warnings,
+	resolve_from_env,
+} from '../../utils/secrets.js';
+import {
 	claude_mutation_context,
 	print_mutation_details,
 } from '../mutation.js';
@@ -24,6 +30,7 @@ interface AddArgs {
 	type: string;
 	env?: string;
 	headers?: string;
+	from_env?: string;
 	description?: string;
 	client?: string;
 	scope?: string;
@@ -65,6 +72,11 @@ export default defineCommand({
 			type: 'string',
 			description: 'Environment variables as KEY=val,KEY=val',
 		},
+		from_env: {
+			type: 'string',
+			description:
+				'Read env values from the process environment (KEY,KEY2) so secrets never appear on the command line or in conversation context. Example: pnpx nopeek run .env --only GITHUB_TOKEN -- mcpick add myserver --command npx --args "-y,some-mcp" --from-env GITHUB_TOKEN --yes --json',
+		},
 		headers: {
 			type: 'string',
 			description: 'HTTP headers as KEY=val,KEY=val',
@@ -104,6 +116,20 @@ export default defineCommand({
 		const add_args = args as AddArgs;
 		const portable = build_portable_server(add_args, transport);
 
+		// Fail before any write if a --from-env variable is missing.
+		const from_env = resolve_from_env_flag(add_args.from_env);
+		if (Object.keys(from_env).length > 0) {
+			portable.env = { ...portable.env, ...from_env };
+		}
+
+		// Non-blocking write-time warnings (secrets, version pinning).
+		const warnings = collect_config_warnings({
+			env: portable.env,
+			headers: portable.headers,
+			args: portable.args,
+		});
+		emit_warnings(warnings);
+
 		if (add_args.client && add_args.client !== 'claude-code') {
 			await add_to_client(
 				add_args.client,
@@ -111,6 +137,7 @@ export default defineCommand({
 				add_args.scope as McpClientScope | undefined,
 				add_args.location,
 				add_args.json,
+				warnings,
 			);
 			return;
 		}
@@ -155,6 +182,7 @@ export default defineCommand({
 					...mutation,
 					cli: result.success,
 					error: result.error,
+					...(warnings.length > 0 ? { warnings } : {}),
 				},
 				true,
 			);
@@ -201,6 +229,7 @@ async function add_to_client(
 	scope: McpClientScope | undefined,
 	location_path: string | undefined,
 	json: boolean,
+	warnings: ConfigWarning[],
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -224,7 +253,14 @@ async function add_to_client(
 			server,
 		);
 		if (json) {
-			output({ added: server.name, ...mutation }, true);
+			output(
+				{
+					added: server.name,
+					...mutation,
+					...(warnings.length > 0 ? { warnings } : {}),
+				},
+				true,
+			);
 		} else {
 			console.log(
 				`Added '${server.name}' (${adapter.id}:${location.scope})`,
@@ -235,6 +271,22 @@ async function add_to_client(
 		error(
 			err instanceof Error ? err.message : 'Failed to add server',
 		);
+	}
+}
+
+function resolve_from_env_flag(
+	from_env: string | undefined,
+): Record<string, string> {
+	if (!from_env) return {};
+	const keys = from_env
+		.split(',')
+		.map((key) => key.trim())
+		.filter((key) => key.length > 0);
+	if (keys.length === 0) return {};
+	try {
+		return resolve_from_env(keys);
+	} catch (err) {
+		error(err instanceof Error ? err.message : '--from-env failed');
 	}
 }
 
