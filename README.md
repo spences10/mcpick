@@ -23,8 +23,9 @@ Requirements:
 
 - Node.js 22+
 - Claude Code is required only for Claude Code-specific commands
-- The external `skills` CLI is used through `npx -y skills@latest` for
-  portable skills commands
+- The GitHub CLI (`gh`, authenticated) is required for portable skills
+  commands; [check-skills](https://github.com/spences10/check-skills)
+  validates skills before install when available
 
 ## Agent-first CLI
 
@@ -87,33 +88,61 @@ npx mcpick add-json <name> '{"command":"npx","args":["-y","package-name"]}'
 npx mcpick remove <server>
 ```
 
-For secret-backed servers, prefer environment variable references and
-secret-safe loading tools. MCPick redacts printed values, but MCP
-client config files may still store secrets in plain text because that
-is how many clients currently load MCP credentials.
+MCPick warns when a value you write looks like a secret, redacts
+printed output, and `npx mcpick doctor` flags plaintext secrets
+already on disk. To keep secrets off the command line and out of LLM
+conversation context, resolve them from the process environment:
+
+```bash
+pnpx nopeek run .env --only GITHUB_TOKEN -- npx mcpick add --name github --command npx --args "-y,@modelcontextprotocol/server-github" --from-env GITHUB_TOKEN --yes
+```
+
+MCP client config files may still store secrets in plain text because
+that is how many clients currently load MCP credentials; prefer
+`${VAR}` references where your client supports them.
+
+## Validate your setup
+
+`npx mcpick doctor` checks every known client config: JSON validity,
+per-client schema shape, missing commands on PATH, duplicate servers
+across scopes, plaintext secrets, and unpinned server packages. It
+exits non-zero when it finds errors, so it works in CI:
+
+```bash
+npx mcpick doctor
+npx mcpick doctor --client cursor --json
+```
 
 ## Portable skills
 
-MCPick delegates portable SKILL.md management to the external `skills`
-CLI.
+MCPick installs portable SKILL.md packs through the GitHub CLI's
+`gh skill` commands. Installs are staged in a temporary directory and
+validated with check-skills before anything is written to your agent
+directories, and each install records provenance (source repo, pinned
+ref, target agents) shown in `skills list --json`.
 
 ```bash
 # List installed skills for a client
 npx mcpick skills list --agent pi --json
 
-# See available skills from a source without installing
+# Search GitHub, or see what a source offers without installing
+npx mcpick skills search svelte
 npx mcpick skills add spences10/skills --list
+npx mcpick skills preview spences10/skills svelte-runes
 
-# Install one skill
-npx mcpick skills add spences10/skills --agent pi --skill svelte-runes --yes
+# Install one skill, pinned for reproducibility
+npx mcpick skills add spences10/skills --agent pi --skill svelte-runes --pin v1.2.0 --yes
 
-# Install all skills for a client globally
-npx mcpick skills add spences10/skills --agent opencode --skill '*' --global --yes
+# Install all skills from a repo at user scope
+npx mcpick skills add spences10/skills --agent opencode --all --global --yes
 
-# Update/remove
-npx mcpick skills update --global --yes
-npx mcpick skills remove svelte-runes --agent pi --yes
+# Check for updates, then apply them
+npx mcpick skills update --dry-run --json
+npx mcpick skills update
 ```
+
+`skills remove` is not supported by the `gh skill` backend; it reports
+the manual deletion paths instead.
 
 ## Claude Code-specific tools
 

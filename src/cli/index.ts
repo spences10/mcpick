@@ -82,7 +82,7 @@ const WORKFLOW_SECTION = `
 \x1b[4m\x1b[1mWORKFLOW\x1b[22m\x1b[24m MCPick has two vendor-neutral layers and one Claude Code-specific layer.
 
   MCP servers: toggle configured servers per client with mcpick list/enable/disable/clients.
-  Skills: install portable SKILL.md packs through the external skills CLI via mcpick skills.
+  Skills: install portable SKILL.md packs via the GitHub CLI (gh skill) with check-skills validation.
   Claude Code plugins/hooks/marketplaces: client-specific commands under plugins/hooks/marketplace/cache.`;
 
 const CONCEPTS_SECTION = `
@@ -132,17 +132,20 @@ const EXAMPLES_SECTION = `
   See skills available from a repo without installing:
     mcpick skills add spences10/skills --list
 
-  Install one portable skill for Pi:
-    mcpick skills add spences10/skills --agent pi --skill svelte-runes --yes
+  Install one portable skill for Pi, pinned for reproducibility:
+    mcpick skills add spences10/skills --agent pi --skill svelte-runes --pin v1.2.0 --yes
 
   Install all portable skills for OpenCode globally:
-    mcpick skills add spences10/skills --agent opencode --skill '*' --global --yes
+    mcpick skills add spences10/skills --agent opencode --all --global --yes
 
-  Update portable skills non-interactively:
-    mcpick skills update --global --yes
+  Preview skill updates without modifying files:
+    mcpick skills update --dry-run --json
 
-  Remove a portable skill for Pi:
-    mcpick skills remove svelte-runes --agent pi --yes
+  Search GitHub for portable skills:
+    mcpick skills search svelte
+
+  Validate all MCP client configs (exits non-zero on errors):
+    mcpick doctor --json
 
   Prefer --json for machine-readable output where supported. MCPick redacts known secret patterns before printing.
   Run without arguments to launch the interactive TUI (not suitable for LLM agents).`;
