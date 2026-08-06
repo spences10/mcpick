@@ -1,5 +1,21 @@
 # mcpick
 
+## 0.1.0
+
+### Minor Changes
+
+- 65a3fa2: Warn on plaintext secrets at write time, add --from-env for
+  nopeek flows, nudge version pinning
+- 78e6020: Add mcpick doctor: validate all client configs, detect
+  silent breakage, plaintext secrets, unpinned servers
+- f59ea07: Replace Vercel skills CLI with gh skill backend,
+  check-skills validation, and install provenance tracking
+
+### Patch Changes
+
+- d4d739e: Document new gh skill backend, doctor command, --from-env
+  secrets flow, and refreshed CLI help examples
+
 ## 0.0.26
 
 ### Patch Changes
