@@ -11,6 +11,10 @@ const ANSI_PATTERN = new RegExp(
 
 const TEXT_REDACTIONS: Array<[RegExp, string]> = [
 	[/AKIA[A-Z0-9]{16}/g, '[REDACTED:AWS_ACCESS_KEY]'],
+	[/\bghp_[A-Za-z0-9]{20,}\b/g, '[REDACTED:GITHUB_TOKEN]'],
+	[/\bgithub_pat_[A-Za-z0-9_]{20,}\b/g, '[REDACTED:GITHUB_TOKEN]'],
+	[/\bglpat-[A-Za-z0-9_-]{10,}\b/g, '[REDACTED:GITLAB_TOKEN]'],
+	[/\bxox[baprs]-[A-Za-z0-9-]{8,}\b/g, '[REDACTED:SLACK_TOKEN]'],
 	[/\bAIza[0-9A-Za-z_-]{35}\b/g, '[REDACTED:GOOGLE_API_KEY]'],
 	[/\bya29\.[0-9A-Za-z_-]{20,}\b/g, '[REDACTED:GOOGLE_OAUTH_TOKEN]'],
 	[
@@ -32,7 +36,7 @@ const TEXT_REDACTIONS: Array<[RegExp, string]> = [
 		'$1[REDACTED]',
 	],
 	[
-		/\b((?:api[_-]?key|token|secret|password|passwd|client[_-]?secret|access[_-]?token|refresh[_-]?token)\s*[:=]\s*["']?)[^"'\s,}\]]{8,}/gi,
+		/\b((?:api[_-]?key|token|secret|password|passwd|client[_-]?secret|access[_-]?token|refresh[_-]?token)["']?\s*[:=]\s*["']?)[^"'\s,}\]]{8,}/gi,
 		'$1[REDACTED]',
 	],
 	[

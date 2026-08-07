@@ -104,6 +104,27 @@ describe('redact_text', () => {
 		expect(redacted).not.toContain('sk-' + 'b'.repeat(32));
 		expect(redacted).not.toContain('secret-token-value');
 	});
+
+	it('redacts quoted JSON key-value pairs (dry-run diff shape)', () => {
+		const diff_line = '+    "GITHUB_TOKEN": "ghp_abcdefghijklmnopqrstuvwx"';
+		const redacted = redact_text(diff_line);
+		expect(redacted).not.toContain('ghp_');
+		expect(redacted).toContain('"GITHUB_TOKEN"');
+	});
+
+	it('redacts standalone GitHub/GitLab/Slack tokens', () => {
+		const text = [
+			'ghp_' + 'g'.repeat(24),
+			'github_pat_' + 'h'.repeat(24),
+			'glpat-' + 'i'.repeat(20),
+			'xoxb-' + '1234567890-abcdefghij',
+		].join(' ');
+		const redacted = redact_text(text);
+		expect(redacted).not.toContain('ghp_');
+		expect(redacted).not.toContain('github_pat_');
+		expect(redacted).not.toContain('glpat-');
+		expect(redacted).not.toContain('xoxb-');
+	});
 });
 
 describe('redact_value', () => {
