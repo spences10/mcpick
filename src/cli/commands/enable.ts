@@ -5,12 +5,19 @@ import {
 	resolve_client_location,
 	set_client_server_enabled,
 } from '../../core/client-config.js';
-import { get_all_available_servers } from '../../core/registry.js';
+import {
+	get_all_available_servers,
+	read_server_registry,
+} from '../../core/registry.js';
 import { McpScope } from '../../types.js';
 import { add_mcp_via_cli } from '../../utils/claude-cli.js';
 import {
 	claude_mutation_context,
+	DRY_RUN_ARG,
+	print_dry_run_preview,
+	print_dry_run_unsupported,
 	print_mutation_details,
+	run_dry_run,
 } from '../mutation.js';
 import { error, output } from '../output.js';
 
@@ -46,6 +53,7 @@ export default defineCommand({
 			description: 'Output as JSON',
 			default: false,
 		},
+		'dry-run': DRY_RUN_ARG,
 	},
 	async run({ args }) {
 		if (args.client && args.client !== 'claude-code') {
@@ -55,6 +63,7 @@ export default defineCommand({
 				args.scope as McpClientScope | undefined,
 				args.location,
 				args.json,
+				args['dry-run'],
 			);
 			return;
 		}
@@ -62,6 +71,19 @@ export default defineCommand({
 		const scope = (args.scope || 'local') as McpScope;
 		if (!['local', 'project', 'user'].includes(scope)) {
 			error(`Invalid scope: ${scope}. Use local, project, or user.`);
+		}
+
+		if (args['dry-run']) {
+			// Read the registry directly: get_all_available_servers()
+			// syncs config→registry (a write), which dry-run forbids.
+			const registry = await read_server_registry();
+			if (!registry.servers.some((s) => s.name === args.server)) {
+				error(
+					`Server '${args.server}' not found in registry. Run 'mcpick list' to see available servers.`,
+				);
+			}
+			print_dry_run_unsupported(args.json);
+			return;
 		}
 
 		const all_servers = await get_all_available_servers();
@@ -96,6 +118,7 @@ async function enable_client_server(
 	scope: McpClientScope | undefined,
 	location_path: string | undefined,
 	json: boolean,
+	dry_run: boolean,
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -113,6 +136,13 @@ async function enable_client_server(
 			scope,
 			location_path,
 		);
+		if (dry_run) {
+			const { previews } = await run_dry_run(() =>
+				set_client_server_enabled(adapter, location, server, true),
+			);
+			print_dry_run_preview(previews, { json });
+			return;
+		}
 		const mutation = await set_client_server_enabled(
 			adapter,
 			location,

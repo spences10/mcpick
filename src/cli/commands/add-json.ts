@@ -15,7 +15,12 @@ import {
 } from '../../utils/secrets.js';
 import {
 	claude_mutation_context,
+	DRY_RUN_ARG,
+	is_dry_run_arg,
+	print_dry_run_preview,
+	print_dry_run_unsupported,
 	print_mutation_details,
+	run_dry_run,
 } from '../mutation.js';
 import { error, output } from '../output.js';
 
@@ -56,6 +61,7 @@ export default defineCommand({
 			description:
 				'Exact config path when a client has multiple matching locations',
 		},
+		'dry-run': DRY_RUN_ARG,
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -63,6 +69,7 @@ export default defineCommand({
 		},
 	},
 	async run({ args }) {
+		const dry_run = is_dry_run_arg(args);
 		let parsed: unknown;
 		try {
 			parsed = JSON.parse(args.config);
@@ -117,6 +124,7 @@ export default defineCommand({
 				args.location,
 				args.json,
 				warnings,
+				dry_run,
 			);
 			return;
 		}
@@ -124,6 +132,11 @@ export default defineCommand({
 		const scope = (args.scope || 'local') as McpScope;
 		if (!['local', 'project', 'user'].includes(scope)) {
 			error(`Invalid scope: ${scope}. Use local, project, or user.`);
+		}
+
+		if (dry_run) {
+			print_dry_run_unsupported(args.json, warnings);
+			return;
 		}
 
 		const result = await mcp_add_json_via_cli(
@@ -163,6 +176,7 @@ async function add_json_to_client(
 	location_path: string | undefined,
 	json: boolean,
 	warnings: ConfigWarning[],
+	dry_run: boolean,
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -180,6 +194,13 @@ async function add_json_to_client(
 			scope,
 			location_path,
 		);
+		if (dry_run) {
+			const { previews } = await run_dry_run(() =>
+				add_client_server_config(adapter, location, name, config),
+			);
+			print_dry_run_preview(previews, { json, warnings });
+			return;
+		}
 		const mutation = await add_client_server_config(
 			adapter,
 			location,

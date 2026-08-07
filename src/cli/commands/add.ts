@@ -18,7 +18,12 @@ import {
 } from '../../utils/secrets.js';
 import {
 	claude_mutation_context,
+	DRY_RUN_ARG,
+	is_dry_run_arg,
+	print_dry_run_preview,
+	print_dry_run_unsupported,
 	print_mutation_details,
+	run_dry_run,
 } from '../mutation.js';
 import { error, output } from '../output.js';
 
@@ -101,6 +106,7 @@ export default defineCommand({
 			description:
 				'Exact config path when a client has multiple matching locations',
 		},
+		'dry-run': DRY_RUN_ARG,
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
@@ -114,6 +120,7 @@ export default defineCommand({
 		}
 
 		const add_args = args as AddArgs;
+		const dry_run = is_dry_run_arg(args);
 		const portable = build_portable_server(add_args, transport);
 
 		// Fail before any write if a --from-env variable is missing.
@@ -138,6 +145,7 @@ export default defineCommand({
 				add_args.location,
 				add_args.json,
 				warnings,
+				dry_run,
 			);
 			return;
 		}
@@ -167,6 +175,11 @@ export default defineCommand({
 			error(
 				`Invalid server config: ${err instanceof Error ? err.message : 'validation failed'}`,
 			);
+		}
+
+		if (dry_run) {
+			print_dry_run_unsupported(add_args.json, warnings);
+			return;
 		}
 
 		await add_server_to_registry(server);
@@ -230,6 +243,7 @@ async function add_to_client(
 	location_path: string | undefined,
 	json: boolean,
 	warnings: ConfigWarning[],
+	dry_run: boolean,
 ): Promise<void> {
 	const adapter = get_client_adapter(client);
 	if (!adapter) {
@@ -247,6 +261,13 @@ async function add_to_client(
 			scope,
 			location_path,
 		);
+		if (dry_run) {
+			const { previews } = await run_dry_run(() =>
+				add_client_server(adapter, location, server),
+			);
+			print_dry_run_preview(previews, { json, warnings });
+			return;
+		}
 		const mutation = await add_client_server(
 			adapter,
 			location,

@@ -22,6 +22,37 @@ export interface ConfigBackupInfo {
 	created_at: string;
 }
 
+// ---------------------------------------------------------------------------
+// Dry-run preview session
+// ---------------------------------------------------------------------------
+//
+// While a session is active, safe_json_write computes the exact would-be
+// content through the same serialization path as a real write, records it,
+// and touches NOTHING: no mkdir, no backup, no temp file, no rename.
+
+export interface DryRunPreview {
+	path: string;
+	original_content?: string;
+	next_content: string;
+}
+
+let dry_run_previews: DryRunPreview[] | null = null;
+
+export function start_dry_run(): void {
+	dry_run_previews = [];
+}
+
+/** Stop the session (if any) and return the recorded previews. */
+export function collect_dry_run(): DryRunPreview[] {
+	const previews = dry_run_previews ?? [];
+	dry_run_previews = null;
+	return previews;
+}
+
+export function is_dry_run(): boolean {
+	return dry_run_previews !== null;
+}
+
 async function file_exists(path: string): Promise<boolean> {
 	try {
 		await access(path);
@@ -76,6 +107,18 @@ export async function safe_json_write(
 	data: Record<string, unknown> | unknown[],
 	indent: string | number = 2,
 ): Promise<SafeJsonWriteResult> {
+	if (dry_run_previews) {
+		const existed = await file_exists(path);
+		dry_run_previews.push({
+			path,
+			original_content: existed
+				? await readFile(path, 'utf-8')
+				: undefined,
+			next_content: JSON.stringify(data, null, indent),
+		});
+		return { path };
+	}
+
 	await mkdir(dirname(path), { recursive: true });
 
 	const existed = await file_exists(path);
