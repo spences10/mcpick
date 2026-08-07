@@ -2,6 +2,11 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import type {
+	AsyncCommandRunner,
+	CommandResult,
+} from '../utils/skills-cli.js';
+import { get_skills_provenance_path } from '../utils/skills-cli.js';
 import { run_doctor } from './doctor.js';
 
 const original_cwd = process.cwd();
@@ -332,5 +337,146 @@ describe('run_doctor', () => {
 		});
 		// local and user scopes share ~/.claude.json — counted once
 		expect(report.summary.checked).toBe(1);
+	});
+
+	describe('skill drift', () => {
+		function ok(stdout = ''): CommandResult {
+			return { status: 0, stdout, stderr: '' };
+		}
+
+		function enoent(): CommandResult {
+			const error = new Error(
+				'spawn gh ENOENT',
+			) as NodeJS.ErrnoException;
+			error.code = 'ENOENT';
+			return { status: null, stdout: '', stderr: '', error };
+		}
+
+		function gh_runner(
+			handler: (
+				command: string,
+				args: string[],
+			) => CommandResult | undefined,
+		): AsyncCommandRunner {
+			return async (command, args) => handler(command, args) ?? ok();
+		}
+
+		async function seed_provenance(
+			entries: Array<Record<string, unknown>>,
+		): Promise<void> {
+			const dir = join(get_skills_provenance_path(), '..');
+			await mkdir(dir, { recursive: true });
+			await writeFile(
+				get_skills_provenance_path(),
+				JSON.stringify({ skills: entries }),
+			);
+		}
+
+		it('emits skill-drift and unpinned-skill issues', async () => {
+			await temp_env();
+			await seed_provenance([
+				{
+					name: 'review',
+					source: 'owner/repo',
+					ref: 'v1.0.0',
+					agents: ['pi'],
+					scope: 'user',
+					installed_at: '2026-08-01T00:00:00Z',
+				},
+				{
+					name: 'floating',
+					source: 'owner/other',
+					agents: ['pi'],
+					scope: 'user',
+					installed_at: '2026-08-01T00:00:00Z',
+				},
+			]);
+
+			const runner = gh_runner((command, args) => {
+				if (command === 'gh' && args[1] === 'list') {
+					return ok(
+						JSON.stringify([
+							{
+								skillName: 'review',
+								sourceURL: 'https://github.com/owner/repo',
+								scope: 'user',
+								version: 'v2.0.0',
+								pinned: false,
+								path: '/home/u/.agents/skills/review',
+								agentHosts: [],
+							},
+						]),
+					);
+				}
+				return undefined;
+			});
+
+			const report = await run_doctor({ runner });
+
+			expect(report.skipped_checks).toEqual([]);
+			const drift = report.issues.find(
+				(issue) => issue.check === 'skill-drift',
+			);
+			expect(drift).toMatchObject({
+				severity: 'warning',
+				client: 'skills',
+				server: 'review',
+			});
+			expect(drift?.message).toContain('v1.0.0');
+			expect(drift?.message).toContain('v2.0.0');
+
+			const unpinned = report.issues.find(
+				(issue) => issue.check === 'unpinned-skill',
+			);
+			expect(unpinned).toMatchObject({
+				severity: 'warning',
+				client: 'skills',
+				server: 'floating',
+			});
+		});
+
+		it('reports skipped_checks when gh is unavailable, keeping local findings', async () => {
+			await temp_env();
+			await seed_provenance([
+				{
+					name: 'pinned',
+					source: 'owner/repo',
+					ref: 'v1.0.0',
+					agents: ['pi'],
+					scope: 'user',
+					installed_at: '2026-08-01T00:00:00Z',
+				},
+			]);
+
+			const runner = gh_runner(() => enoent());
+			const report = await run_doctor({ runner });
+
+			expect(report.skipped_checks).toHaveLength(1);
+			expect(report.skipped_checks[0]).toContain('skill-drift');
+			expect(
+				report.issues.filter(
+					(issue) => issue.check === 'skill-drift',
+				),
+			).toEqual([]);
+			// a missing gh is not an error
+			expect(report.summary.errors).toBe(0);
+		});
+
+		it('emits no skill issues and makes no gh calls without provenance', async () => {
+			await temp_env();
+			let called = false;
+			const runner: AsyncCommandRunner = async () => {
+				called = true;
+				return ok();
+			};
+
+			const report = await run_doctor({ runner });
+
+			expect(called).toBe(false);
+			expect(report.skipped_checks).toEqual([]);
+			expect(
+				report.issues.filter((issue) => issue.client === 'skills'),
+			).toEqual([]);
+		});
 	});
 });

@@ -106,7 +106,8 @@ describe('redact_text', () => {
 	});
 
 	it('redacts quoted JSON key-value pairs (dry-run diff shape)', () => {
-		const diff_line = '+    "GITHUB_TOKEN": "ghp_abcdefghijklmnopqrstuvwx"';
+		const diff_line =
+			'+    "GITHUB_TOKEN": "ghp_abcdefghijklmnopqrstuvwx"';
 		const redacted = redact_text(diff_line);
 		expect(redacted).not.toContain('ghp_');
 		expect(redacted).toContain('"GITHUB_TOKEN"');

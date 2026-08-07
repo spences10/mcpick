@@ -1213,3 +1213,103 @@ export async function remove_skills(
 		},
 	);
 }
+
+// ---------------------------------------------------------------------------
+// Skill drift detection (compares recorded provenance refs against upstream)
+// ---------------------------------------------------------------------------
+
+export interface SkillDriftFinding {
+	entry: SkillProvenanceEntry;
+	kind: 'drifted' | 'unresolved' | 'unpinned';
+	/** Current upstream version, when the skill still resolves. */
+	current?: string;
+	/** Installed path reported by gh, when known. */
+	installed_path?: string;
+}
+
+export type SkillDriftResult = {
+	/**
+	 * 'checked' means the upstream comparison ran (or there was nothing
+	 * pinned to compare). 'skipped' means gh/the network was unavailable;
+	 * local-only findings (unpinned) are still reported.
+	 */
+	status: 'checked' | 'skipped';
+	/** Why the upstream comparison was skipped (only when status is 'skipped'). */
+	reason?: string;
+	findings: SkillDriftFinding[];
+};
+
+/**
+ * Compare recorded skill provenance against what gh currently resolves.
+ * Never throws and never touches the network when there is no pinned
+ * provenance to compare: offline hosts get a 'skipped' status instead.
+ */
+export async function check_skill_drift(
+	runner: AsyncCommandRunner = default_async_runner,
+): Promise<SkillDriftResult> {
+	const provenance = await read_skills_provenance();
+	if (provenance.length === 0) {
+		return { status: 'checked', findings: [] };
+	}
+
+	// Local-only finding: no ref recorded at install time.
+	const findings: SkillDriftFinding[] = provenance
+		.filter((entry) => !entry.ref)
+		.map((entry) => ({ entry, kind: 'unpinned' as const }));
+
+	const pinned = provenance.filter((entry) => !!entry.ref);
+	if (pinned.length === 0) {
+		return { status: 'checked', findings };
+	}
+
+	const ready = await ensure_gh_skill_ready(runner);
+	if (!ready.ok) {
+		return { status: 'skipped', reason: ready.error, findings };
+	}
+
+	const listed = await runner('gh', build_list_args({}));
+	if (listed.status !== 0) {
+		const reason =
+			listed.stderr.trim() ||
+			listed.error?.message ||
+			'gh skill list failed';
+		return { status: 'skipped', reason, findings };
+	}
+
+	let installed: GhInstalledSkill[];
+	try {
+		installed = parse_gh_skill_list_json(listed.stdout);
+	} catch (error) {
+		return {
+			status: 'skipped',
+			reason: (error as Error).message,
+			findings,
+		};
+	}
+
+	for (const entry of pinned) {
+		const match = installed.find(
+			(skill) =>
+				skill.skillName.toLowerCase() === entry.name.toLowerCase() &&
+				(
+					github_repository_from_source_url(skill.sourceURL) ??
+					skill.sourceURL
+				).toLowerCase() === entry.source.toLowerCase() &&
+				(!skill.scope || skill.scope === entry.scope),
+		);
+		if (!match) {
+			findings.push({ entry, kind: 'unresolved' });
+			continue;
+		}
+		if (match.version && match.version !== entry.ref) {
+			findings.push({
+				entry,
+				kind: 'drifted',
+				current: match.version,
+				installed_path: match.path,
+			});
+		}
+	}
+
+	return { status: 'checked', findings };
+}

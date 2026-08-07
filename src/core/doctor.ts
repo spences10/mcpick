@@ -4,6 +4,11 @@ import { delimiter, join } from 'node:path';
 import { parse as parse_toml } from 'smol-toml';
 import type { McpClientId, McpClientScope } from '../types.js';
 import {
+	check_skill_drift,
+	get_skills_provenance_path,
+	type AsyncCommandRunner,
+} from '../utils/skills-cli.js';
+import {
 	detect_unpinned_package,
 	scan_secret_values,
 } from '../utils/secrets.js';
@@ -20,12 +25,15 @@ export type DoctorCheck =
 	| 'command-missing'
 	| 'duplicate-server'
 	| 'plaintext-secret'
-	| 'unpinned-server';
+	| 'unpinned-server'
+	| 'skill-drift'
+	| 'unpinned-skill';
 
 export interface DoctorIssue {
 	severity: DoctorSeverity;
 	check: DoctorCheck;
-	client: McpClientId;
+	/** Owning client id, or 'skills' for skill provenance findings. */
+	client: McpClientId | 'skills';
 	path: string;
 	server?: string;
 	message: string;
@@ -41,10 +49,14 @@ export interface DoctorSummary {
 export interface DoctorReport {
 	issues: DoctorIssue[];
 	summary: DoctorSummary;
+	/** Checks that could not run, e.g. 'skill-drift (gh unavailable)'. */
+	skipped_checks: string[];
 }
 
 export interface DoctorOptions {
 	client?: string;
+	/** Injection seam for the skills drift check (defaults to real gh). */
+	runner?: AsyncCommandRunner;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -60,7 +72,12 @@ interface LocationEntries {
 	dropped: Array<{ name: string; reason: string }>;
 }
 
-const server_keys = ['mcpServers', 'servers', 'mcp'] as const;
+const server_keys = [
+	'mcpServers',
+	'servers',
+	'mcp',
+	'mcp_servers',
+] as const;
 type ServerKey = (typeof server_keys)[number];
 
 /** Top-level server-map key each client expects in its config files. */
@@ -163,6 +180,8 @@ export async function run_doctor(
 
 	await check_commands_exist(issues, commands);
 
+	const skipped_checks = await check_skills(issues, options.runner);
+
 	const errors = issues.filter(
 		(issue) => issue.severity === 'error',
 	).length;
@@ -174,6 +193,7 @@ export async function run_doctor(
 			warnings: issues.length - errors,
 			checked: checked_paths.size,
 		},
+		skipped_checks,
 	};
 }
 
@@ -658,6 +678,64 @@ function check_unpinned(args: unknown, push: PushIssue): void {
 		message: `Server launches "${warning.key}" without a pinned version (${warning.pattern}); every start pulls whatever is current.`,
 		remediation: `${warning.remediation} A future mcpick.lock will record resolved versions for drift detection.`,
 	});
+}
+
+/**
+ * Skills provenance drift (audit rec #9): compares recorded install refs
+ * against upstream. Offline-safe — when gh is unavailable the upstream
+ * comparison is skipped and reported in the return value, while local
+ * findings (unpinned installs) still surface.
+ *
+ * Returns the skipped_checks notes for the report.
+ */
+async function check_skills(
+	issues: DoctorIssue[],
+	runner?: AsyncCommandRunner,
+): Promise<string[]> {
+	const result = await check_skill_drift(runner);
+
+	for (const finding of result.findings) {
+		const { entry } = finding;
+		const base = {
+			client: 'skills' as const,
+			path: finding.installed_path ?? get_skills_provenance_path(),
+			server: entry.name,
+		};
+
+		if (finding.kind === 'drifted') {
+			issues.push({
+				...base,
+				severity: 'warning',
+				check: 'skill-drift',
+				message: `Skill "${entry.name}" installed from ${entry.source}@${entry.ref} no longer matches upstream (now ${finding.current}).`,
+				remediation:
+					'Update or reinstall the skill to move it to the current upstream ref.',
+			});
+		} else if (finding.kind === 'unresolved') {
+			issues.push({
+				...base,
+				severity: 'warning',
+				check: 'skill-drift',
+				message: `Skill "${entry.name}" installed from ${entry.source}@${entry.ref} no longer resolves upstream.`,
+				remediation:
+					'The skill may have been removed upstream or uninstalled outside mcpick; reinstall it or clean up the provenance entry.',
+			});
+		} else {
+			issues.push({
+				...base,
+				severity: 'warning',
+				check: 'unpinned-skill',
+				message: `Skill "${entry.name}" installed from ${entry.source} has no recorded ref; drift cannot be detected.`,
+				remediation:
+					'Reinstall with a pinned ref (owner/repo@ref) so drift detection can track it.',
+			});
+		}
+	}
+
+	if (result.status === 'skipped') {
+		return [`skill-drift (${result.reason})`];
+	}
+	return [];
 }
 
 async function check_commands_exist(

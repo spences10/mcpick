@@ -71,4 +71,7 @@ function print_human_report(
 	console.log(
 		`\n${report.summary.errors} error(s), ${report.summary.warnings} warning(s), ${report.summary.checked} config file(s) checked`,
 	);
+	for (const skipped of report.skipped_checks) {
+		console.log(`  skipped: ${skipped}`);
+	}
 }

@@ -25,6 +25,7 @@ import {
 	build_preview_args,
 	build_search_args,
 	build_update_args,
+	check_skill_drift,
 	ensure_gh_skill_ready,
 	get_skills_provenance_path,
 	install_skills,
@@ -835,5 +836,182 @@ describe('remove_skills', () => {
 			code: 'REMOVE_UNSUPPORTED',
 			paths: ['/home/u/.agents/skills/git-commit'],
 		});
+	});
+});
+
+describe('check_skill_drift', () => {
+	let state_dir: string;
+
+	beforeEach(async () => {
+		state_dir = await mkdtemp(join(tmpdir(), 'mcpick-drift-state-'));
+		vi.stubEnv('MCPICK_CONFIG_DIR', join(state_dir, 'mcpick'));
+	});
+
+	afterEach(async () => {
+		vi.unstubAllEnvs();
+		await rm(state_dir, { recursive: true, force: true });
+	});
+
+	async function seed_provenance(
+		entries: Array<Record<string, unknown>>,
+	): Promise<void> {
+		await mkdir(join(state_dir, 'mcpick'), { recursive: true });
+		await writeFile(
+			get_skills_provenance_path(),
+			JSON.stringify({ skills: entries }),
+		);
+	}
+
+	function gh_listing(
+		skills: Array<Record<string, unknown>>,
+	): CommandResult {
+		return ok(JSON.stringify(skills));
+	}
+
+	it('reports nothing when no provenance exists, without calling gh', async () => {
+		const { runner, calls } = make_runner(() => ok());
+		const result = await check_skill_drift(runner);
+		expect(result).toEqual({ status: 'checked', findings: [] });
+		expect(calls).toHaveLength(0);
+	});
+
+	it('flags unpinned installs without needing gh', async () => {
+		await seed_provenance([
+			{
+				name: 'review',
+				source: 'owner/repo',
+				agents: ['pi'],
+				scope: 'user',
+				installed_at: '2026-08-01T00:00:00Z',
+			},
+		]);
+
+		const { runner, calls } = make_runner(() => ok());
+		const result = await check_skill_drift(runner);
+		expect(result.status).toBe('checked');
+		expect(result.findings).toHaveLength(1);
+		expect(result.findings[0].kind).toBe('unpinned');
+		expect(calls).toHaveLength(0);
+	});
+
+	it('flags drifted refs when upstream has moved', async () => {
+		await seed_provenance([
+			{
+				name: 'review',
+				source: 'owner/repo',
+				ref: 'v1.0.0',
+				agents: ['pi'],
+				scope: 'user',
+				installed_at: '2026-08-01T00:00:00Z',
+			},
+		]);
+
+		const { runner } = healthy_gh((command, args) => {
+			if (command === 'gh' && args[1] === 'list') {
+				return gh_listing([
+					{
+						skillName: 'review',
+						sourceURL: 'https://github.com/owner/repo',
+						scope: 'user',
+						version: 'v2.0.0',
+						pinned: false,
+						path: '/home/u/.agents/skills/review',
+						agentHosts: ['pi'],
+					},
+				]);
+			}
+			return undefined;
+		});
+
+		const result = await check_skill_drift(runner);
+		expect(result.status).toBe('checked');
+		expect(result.findings).toEqual([
+			{
+				entry: expect.objectContaining({ name: 'review' }),
+				kind: 'drifted',
+				current: 'v2.0.0',
+				installed_path: '/home/u/.agents/skills/review',
+			},
+		]);
+	});
+
+	it('flags skills that no longer resolve upstream', async () => {
+		await seed_provenance([
+			{
+				name: 'gone',
+				source: 'owner/repo',
+				ref: 'abc123',
+				agents: ['pi'],
+				scope: 'project',
+				installed_at: '2026-08-01T00:00:00Z',
+			},
+		]);
+
+		const { runner } = healthy_gh(); // gh skill list returns []
+		const result = await check_skill_drift(runner);
+		expect(result.status).toBe('checked');
+		expect(result.findings).toHaveLength(1);
+		expect(result.findings[0].kind).toBe('unresolved');
+	});
+
+	it('passes clean when refs still match upstream', async () => {
+		await seed_provenance([
+			{
+				name: 'review',
+				source: 'owner/repo',
+				ref: 'v1.0.0',
+				agents: ['pi'],
+				scope: 'user',
+				installed_at: '2026-08-01T00:00:00Z',
+			},
+		]);
+
+		const { runner } = healthy_gh((command, args) => {
+			if (command === 'gh' && args[1] === 'list') {
+				return gh_listing([
+					{
+						skillName: 'review',
+						sourceURL: 'owner/repo',
+						scope: 'user',
+						version: 'v1.0.0',
+						pinned: true,
+						path: '/x',
+						agentHosts: [],
+					},
+				]);
+			}
+			return undefined;
+		});
+
+		const result = await check_skill_drift(runner);
+		expect(result).toEqual({ status: 'checked', findings: [] });
+	});
+
+	it('skips the upstream comparison when gh is missing, keeping local findings', async () => {
+		await seed_provenance([
+			{
+				name: 'pinned',
+				source: 'owner/repo',
+				ref: 'v1.0.0',
+				agents: ['pi'],
+				scope: 'user',
+				installed_at: '2026-08-01T00:00:00Z',
+			},
+			{
+				name: 'floating',
+				source: 'owner/other',
+				agents: ['pi'],
+				scope: 'user',
+				installed_at: '2026-08-01T00:00:00Z',
+			},
+		]);
+
+		const { runner } = make_runner(() => enoent());
+		const result = await check_skill_drift(runner);
+		expect(result.status).toBe('skipped');
+		expect(result.reason).toContain('GitHub CLI');
+		expect(result.findings).toHaveLength(1);
+		expect(result.findings[0].kind).toBe('unpinned');
+		expect(result.findings[0].entry.name).toBe('floating');
 	});
 });
