@@ -8,7 +8,17 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        include:
+          # Windows paths are not yet verified across adapters;
+          # run it as signal-only until the failures are fixed.
+          - os: windows-latest
+            experimental: true
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental || false }}
     steps:
       - uses: actions/checkout@v7
 
