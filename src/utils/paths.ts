@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { access, mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -41,7 +41,43 @@ export function get_claude_settings_path(): string {
 }
 
 export function get_mcpick_dir(): string {
-	return join(get_base_dir().baseDir, 'mcpick');
+	const override = process.env.MCPICK_CONFIG_DIR;
+	if (override && override.length > 0) return override;
+	const new_dir = join(get_xdg_config_home(), 'mcpick');
+	return migrate_legacy_mcpick_dir(new_dir);
+}
+
+function get_xdg_config_home(): string {
+	const xdg = process.env.XDG_CONFIG_HOME;
+	return xdg && xdg.length > 0 ? xdg : join(homedir(), '.config');
+}
+
+let legacy_migration_attempted = false;
+let legacy_dir_in_use: string | null = null;
+
+/**
+ * One-time best-effort move of mcpick-owned state out of
+ * ~/.claude/mcpick (historical) to the XDG config dir. If the move
+ * fails (e.g. cross-device rename), the legacy dir keeps being used
+ * for the rest of this run and the move is retried on the next run —
+ * data is never deleted or duplicated.
+ */
+function migrate_legacy_mcpick_dir(new_dir: string): string {
+	if (legacy_dir_in_use) return legacy_dir_in_use;
+	if (legacy_migration_attempted) return new_dir;
+	legacy_migration_attempted = true;
+	const legacy_dir = join(get_base_dir().baseDir, 'mcpick');
+	try {
+		if (!existsSync(new_dir) && existsSync(legacy_dir)) {
+			mkdirSync(dirname(new_dir), { recursive: true });
+			renameSync(legacy_dir, new_dir);
+		}
+		return new_dir;
+	} catch {
+		legacy_migration_attempted = false;
+		legacy_dir_in_use = legacy_dir;
+		return legacy_dir;
+	}
 }
 
 export function get_dev_overrides_path(): string {

@@ -78,6 +78,7 @@ Supported client adapters:
 | Client                | Scopes               | Command examples                                  |
 | --------------------- | -------------------- | ------------------------------------------------- |
 | Claude Code           | local, project, user | `mcpick list`, `mcpick enable <server>`           |
+| Claude Desktop        | user                 | `mcpick list --client claude-desktop`             |
 | Gemini CLI            | project, user        | `mcpick list --client gemini-cli --scope project` |
 | VS Code / Copilot     | project              | `mcpick list --client vscode --scope project`     |
 | Cursor                | project, user        | `mcpick list --client cursor --scope user`        |
@@ -259,8 +260,10 @@ Common paths include:
 | `~/.config/mcp/mcp.json` | Shared global MCP config used by pi-mcp-adapter |
 | `.pi/mcp.json`           | Pi project override                             |
 
-MCPick-owned state lives under `~/.claude/mcpick/` for historical
-compatibility.
+MCPick-owned state lives under `$XDG_CONFIG_HOME/mcpick/`
+(`~/.config/mcpick/` by default; override with `MCPICK_CONFIG_DIR`).
+State previously kept in `~/.claude/mcpick/` is moved there
+automatically on first run.
 
 ## Development
 

@@ -15,6 +15,7 @@ import {
 } from './profile.js';
 
 const original_claude_config_dir = process.env.CLAUDE_CONFIG_DIR;
+const original_mcpick_config_dir = process.env.MCPICK_CONFIG_DIR;
 const original_cwd = process.cwd();
 
 async function temp_claude_dir(): Promise<string> {
@@ -22,6 +23,7 @@ async function temp_claude_dir(): Promise<string> {
 	const claude_dir = join(dir, '.claude');
 	await mkdir(claude_dir, { recursive: true });
 	process.env.CLAUDE_CONFIG_DIR = claude_dir;
+	process.env.MCPICK_CONFIG_DIR = join(claude_dir, 'mcpick');
 	return claude_dir;
 }
 
@@ -30,6 +32,11 @@ afterEach(() => {
 		delete process.env.CLAUDE_CONFIG_DIR;
 	} else {
 		process.env.CLAUDE_CONFIG_DIR = original_claude_config_dir;
+	}
+	if (original_mcpick_config_dir === undefined) {
+		delete process.env.MCPICK_CONFIG_DIR;
+	} else {
+		process.env.MCPICK_CONFIG_DIR = original_mcpick_config_dir;
 	}
 	process.chdir(original_cwd);
 });

@@ -1,6 +1,12 @@
-import { homedir } from 'node:os';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	writeFileSync,
+} from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	get_backup_filename,
 	get_backups_dir,
@@ -149,5 +155,66 @@ describe('backup filenames', () => {
 		await new Promise((r) => setTimeout(r, 1100));
 		const b = get_backup_filename();
 		expect(a).not.toBe(b);
+	});
+});
+
+describe('mcpick dir XDG location and legacy migration', () => {
+	async function fresh_paths() {
+		vi.resetModules();
+		return await import('./paths.js');
+	}
+
+	function make_env() {
+		const root = mkdtempSync(join(tmpdir(), 'mcpick-paths-'));
+		const claude = join(root, '.claude');
+		const xdg = join(root, 'xdg');
+		mkdirSync(claude, { recursive: true });
+		vi.stubEnv('CLAUDE_CONFIG_DIR', claude);
+		vi.stubEnv('XDG_CONFIG_HOME', xdg);
+		vi.stubEnv('MCPICK_CONFIG_DIR', '');
+		return { root, claude, xdg };
+	}
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it('prefers MCPICK_CONFIG_DIR override', async () => {
+		const { root } = make_env();
+		vi.stubEnv('MCPICK_CONFIG_DIR', join(root, 'custom'));
+		const { get_mcpick_dir } = await fresh_paths();
+		expect(get_mcpick_dir()).toBe(join(root, 'custom'));
+	});
+
+	it('uses XDG_CONFIG_HOME/mcpick and creates nothing eagerly', async () => {
+		const { xdg } = make_env();
+		const { get_mcpick_dir } = await fresh_paths();
+		expect(get_mcpick_dir()).toBe(join(xdg, 'mcpick'));
+		expect(existsSync(join(xdg, 'mcpick'))).toBe(false);
+	});
+
+	it('moves legacy ~/.claude/mcpick state into the XDG dir once', async () => {
+		const { claude, xdg } = make_env();
+		const legacy = join(claude, 'mcpick');
+		mkdirSync(legacy, { recursive: true });
+		writeFileSync(join(legacy, 'servers.json'), '{}');
+
+		const { get_mcpick_dir } = await fresh_paths();
+		expect(get_mcpick_dir()).toBe(join(xdg, 'mcpick'));
+		expect(existsSync(join(xdg, 'mcpick', 'servers.json'))).toBe(
+			true,
+		);
+		expect(existsSync(legacy)).toBe(false);
+	});
+
+	it('leaves legacy dir untouched when the XDG dir already exists', async () => {
+		const { claude, xdg } = make_env();
+		const legacy = join(claude, 'mcpick');
+		mkdirSync(legacy, { recursive: true });
+		mkdirSync(join(xdg, 'mcpick'), { recursive: true });
+
+		const { get_mcpick_dir } = await fresh_paths();
+		expect(get_mcpick_dir()).toBe(join(xdg, 'mcpick'));
+		expect(existsSync(legacy)).toBe(true);
 	});
 });

@@ -347,6 +347,7 @@ describe('install_skills', () => {
 	beforeEach(async () => {
 		state_dir = await mkdtemp(join(tmpdir(), 'mcpick-test-state-'));
 		vi.stubEnv('CLAUDE_CONFIG_DIR', state_dir);
+		vi.stubEnv('MCPICK_CONFIG_DIR', join(state_dir, 'mcpick'));
 	});
 
 	afterEach(async () => {
@@ -679,6 +680,7 @@ describe('list_skills', () => {
 	beforeEach(async () => {
 		state_dir = await mkdtemp(join(tmpdir(), 'mcpick-test-state-'));
 		vi.stubEnv('CLAUDE_CONFIG_DIR', state_dir);
+		vi.stubEnv('MCPICK_CONFIG_DIR', join(state_dir, 'mcpick'));
 	});
 
 	afterEach(async () => {
