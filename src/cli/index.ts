@@ -46,6 +46,7 @@ const main = defineCommand({
 			import('./commands/reload.js').then((m) => m.default),
 		rollback: () =>
 			import('./commands/rollback.js').then((m) => m.default),
+		serve: () => import('./commands/serve.js').then((m) => m.default),
 	},
 });
 

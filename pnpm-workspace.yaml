@@ -1,1 +1,5 @@
 minimumReleaseAge: 2880
+# TODO: remove once tmcp 1.20 is stable (prerelease was inside the age gate)
+minimumReleaseAgeExclude:
+  - tmcp
+  - '@tmcp/*'

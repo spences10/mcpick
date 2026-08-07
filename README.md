@@ -46,6 +46,31 @@ MCPick redacts known secret patterns before printing output. MCP
 configs often contain env vars and authorization headers, so `env` and
 `headers` values are shown as `***` in JSON output.
 
+## MCP server mode
+
+`npx mcpick serve` runs MCPick itself as an MCP server over stdio, so
+agents can manage MCP configuration through tool calls instead of
+shelling out to the CLI. Tools:
+
+- Read: `mcpick_list`, `mcpick_clients`, `mcpick_get`, `mcpick_doctor`
+- Mutate: `mcpick_enable`, `mcpick_disable`, `mcpick_remove`,
+  `mcpick_add`, `mcpick_add_json`
+
+Read-only/destructive annotations are set so clients can make safe
+decisions; secret warnings and `from_env` resolution behave the same
+as the CLI. Client config example:
+
+```json
+{
+	"mcpServers": {
+		"mcpick": {
+			"command": "npx",
+			"args": ["-y", "mcpick", "serve"]
+		}
+	}
+}
+```
+
 ## MCP clients
 
 Supported client adapters:
