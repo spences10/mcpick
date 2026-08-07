@@ -18,6 +18,7 @@ import { manage_hooks } from './commands/manage-hooks.js';
 import { manage_marketplace } from './commands/manage-marketplace.js';
 import { manage_skills } from './commands/manage-skills.js';
 import { restore_config } from './commands/restore.js';
+import { run_doctor } from './core/doctor.js';
 import {
 	client_adapters,
 	type ClientConfigLocation,
@@ -252,6 +253,36 @@ async function handle_save_profile(): Promise<void> {
 	if (result.location) log.info(`Config: ${result.location}`);
 }
 
+async function handle_doctor(): Promise<void> {
+	const report = await run_doctor();
+
+	if (report.issues.length === 0) {
+		log.success(
+			`No problems found (${report.summary.checked} config file(s) checked)`,
+		);
+		return;
+	}
+
+	let current_client = '';
+	for (const issue of report.issues) {
+		if (issue.client !== current_client) {
+			current_client = issue.client;
+			log.step(current_client);
+		}
+		const marker = issue.severity === 'error' ? '✖' : '⚠';
+		const server = issue.server ? ` server "${issue.server}"` : '';
+		log.info(
+			`${marker} [${issue.check}]${server} ${issue.path}\n    ${issue.message}` +
+				(issue.remediation ? `\n    fix: ${issue.remediation}` : ''),
+		);
+	}
+
+	note(
+		`${report.summary.errors} error(s), ${report.summary.warnings} warning(s), ${report.summary.checked} config file(s) checked`,
+		'Doctor summary',
+	);
+}
+
 async function handle_client_tools(): Promise<void> {
 	const adapters = sorted_client_adapters();
 	const client_id = await select({
@@ -358,9 +389,14 @@ async function main(): Promise<void> {
 						hint: 'Choose client, then toggle servers',
 					},
 					{
+						value: 'doctor',
+						label: 'Validate configs (doctor)',
+						hint: 'Check client configs for silent breakage, secrets, unpinned servers',
+					},
+					{
 						value: 'skills' as MenuAction,
 						label: 'Skills',
-						hint: 'Install/list portable SKILL.md packs via skills CLI',
+						hint: 'Install/list portable SKILL.md packs via gh skill',
 					},
 					{
 						value: 'client-tools' as MenuAction,
@@ -403,6 +439,9 @@ async function main(): Promise<void> {
 			switch (action) {
 				case 'edit-config':
 					await edit_config();
+					break;
+				case 'doctor':
+					await handle_doctor();
 					break;
 				case 'skills':
 					await manage_skills();

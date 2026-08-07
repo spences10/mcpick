@@ -226,6 +226,7 @@ MCPick - MCP Configuration Manager
 
 What would you like to do?
   Enable / Disable MCP servers
+  Validate configs (doctor)
   Skills
   Client-specific tools
   Load profile
@@ -237,7 +238,10 @@ What would you like to do?
 
 The primary TUI flow is client-first: choose a client, then toggle its
 MCP servers. Claude Code plugins, hooks, marketplaces, and cache live
-under “Client-specific tools”.
+under “Client-specific tools”. “Validate configs (doctor)” runs the
+same read-only health checks as `mcpick doctor` (config parse errors,
+schema-shape issues, missing commands, duplicate servers, plaintext
+secrets, unpinned servers) and prints the report grouped by client.
 
 ## Config locations
 

@@ -4,6 +4,7 @@ import {
 	install_skills,
 	list_available_skills,
 	list_skills,
+	preview_skill,
 	search_skills,
 	update_skills,
 } from '../utils/skills-cli.js';
@@ -27,6 +28,10 @@ export async function manage_skills(): Promise<void> {
 				label: 'List skills available from source',
 			},
 			{ value: 'search', label: 'Search GitHub for skills' },
+			{
+				value: 'preview',
+				label: 'Preview a skill before installing',
+			},
 			{ value: 'install', label: 'Install skills' },
 			{ value: 'update', label: 'Update skills' },
 			{ value: 'back', label: 'Back' },
@@ -58,6 +63,20 @@ export async function manage_skills(): Promise<void> {
 		});
 		if (typeof query === 'symbol' || !query) return;
 		await show_result(await search_skills(query));
+		return;
+	}
+
+	if (action === 'preview') {
+		const source = await prompt_source();
+		if (!source) return;
+		const skill = await text({
+			message: 'Skill name (optionally name@version):',
+			placeholder: 'svelte-runes',
+		});
+		if (typeof skill === 'symbol') return;
+		await show_result(
+			await preview_skill(source, skill || undefined),
+		);
 		return;
 	}
 
