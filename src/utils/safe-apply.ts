@@ -8,7 +8,8 @@ import {
 	rm,
 	writeFile,
 } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
+import { parse as toml_parse } from 'smol-toml';
 import { ensure_directory_exists, get_backups_dir } from './paths.js';
 
 export interface SafeJsonWriteResult {
@@ -72,7 +73,9 @@ function backup_name(path: string): string {
 		.digest('hex')
 		.slice(0, 10);
 	const safe_base = basename(path).replace(/[^A-Za-z0-9._-]/g, '_');
-	return `config-${safe_base}-${stamp}-${hash}.json`;
+	// Keep the original extension so restore can pick the right parser.
+	const ext = extname(path) || '.json';
+	return `config-${safe_base}-${stamp}-${hash}${ext}`;
 }
 
 async function create_backup(
@@ -107,6 +110,24 @@ export async function safe_json_write(
 	data: Record<string, unknown> | unknown[],
 	indent: string | number = 2,
 ): Promise<SafeJsonWriteResult> {
+	return safe_content_write(
+		path,
+		JSON.stringify(data, null, indent),
+		'json',
+	);
+}
+
+/**
+ * Safely replace a text config file (raw content): backup existing
+ * content, write via temp+rename, verify the result parses as the given
+ * format, and restore the original content on failure. Honors dry-run
+ * sessions exactly like safe_json_write.
+ */
+export async function safe_content_write(
+	path: string,
+	next_content: string,
+	format: 'json' | 'toml' = 'json',
+): Promise<SafeJsonWriteResult> {
 	if (dry_run_previews) {
 		const existed = await file_exists(path);
 		dry_run_previews.push({
@@ -114,7 +135,7 @@ export async function safe_json_write(
 			original_content: existed
 				? await readFile(path, 'utf-8')
 				: undefined,
-			next_content: JSON.stringify(data, null, indent),
+			next_content,
 		});
 		return { path };
 	}
@@ -134,14 +155,17 @@ export async function safe_json_write(
 		dirname(path),
 		`.${basename(path)}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`,
 	);
-	const next_content = JSON.stringify(data, null, indent);
 
 	try {
 		await writeFile(tmp_path, next_content, 'utf-8');
 		await rename(tmp_path, path);
 
 		const written = await readFile(path, 'utf-8');
-		JSON.parse(written);
+		if (format === 'toml') {
+			toml_parse(written);
+		} else {
+			JSON.parse(written);
+		}
 
 		return {
 			path,
@@ -166,10 +190,11 @@ export async function list_config_backups(): Promise<
 		const files = await readdir(backups_dir);
 		const backups: ConfigBackupInfo[] = [];
 		for (const file of files) {
-			if (!file.startsWith('config-') || !file.endsWith('.json')) {
-				continue;
-			}
 			if (file.endsWith('.meta.json')) continue;
+			const is_config_backup =
+				file.startsWith('config-') &&
+				(file.endsWith('.json') || file.endsWith('.toml'));
+			if (!is_config_backup) continue;
 			const backup_path = join(backups_dir, file);
 			try {
 				const meta = JSON.parse(
@@ -211,6 +236,12 @@ export async function restore_config_backup(
 		throw new Error(`Config backup '${backup_path}' not found.`);
 	}
 	const content = await readFile(backup.path, 'utf-8');
+	if (backup.path.endsWith('.toml')) {
+		// Validate before writing; restore raw TOML content byte-identical.
+		toml_parse(content);
+		await safe_content_write(backup.original_path, content, 'toml');
+		return backup;
+	}
 	const parsed = JSON.parse(content) as Record<string, unknown>;
 	await safe_json_write(backup.original_path, parsed);
 	return backup;

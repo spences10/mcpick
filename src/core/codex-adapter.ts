@@ -17,24 +17,12 @@
  * JSON-only restore_config_backup never tries to parse them — rollback
  * integration for TOML backups is a noted follow-up.
  */
-import { createHash, randomUUID } from 'node:crypto';
-import {
-	access,
-	mkdir,
-	readFile,
-	rename,
-	rm,
-	writeFile,
-} from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { parse, stringify } from 'smol-toml';
 import { PortableMcpServer } from '../types.js';
-import {
-	ensure_directory_exists,
-	get_backups_dir,
-} from '../utils/paths.js';
-import { SafeJsonWriteResult } from '../utils/safe-apply.js';
+import { safe_content_write } from '../utils/safe-apply.js';
 import {
 	McpClientAdapter,
 	normalize_mcp_server,
@@ -69,100 +57,6 @@ async function read_toml_file(
 		return null;
 	}
 	return parse(content) as JsonObject;
-}
-
-async function file_exists(path: string): Promise<boolean> {
-	try {
-		await access(path);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-function toml_backup_name(path: string): string {
-	const stamp = new Date()
-		.toISOString()
-		.replace(/[-:]/g, '')
-		.replace(/\.\d{3}Z$/, 'Z');
-	const hash = createHash('sha256')
-		.update(path)
-		.digest('hex')
-		.slice(0, 10);
-	const safe_base = basename(path).replace(/[^A-Za-z0-9._-]/g, '_');
-	// .toml suffix keeps these out of the JSON-only restore path.
-	return `config-${safe_base}-${stamp}-${hash}.toml`;
-}
-
-async function create_toml_backup(
-	path: string,
-	content: string,
-): Promise<string> {
-	const backups_dir = get_backups_dir();
-	await ensure_directory_exists(backups_dir);
-	const backup_path = join(backups_dir, toml_backup_name(path));
-	await writeFile(backup_path, content, 'utf-8');
-	await writeFile(
-		`${backup_path}.meta.json`,
-		JSON.stringify(
-			{
-				original_path: path,
-				created_at: new Date().toISOString(),
-			},
-			null,
-			2,
-		),
-		'utf-8',
-	);
-	return backup_path;
-}
-
-/**
- * Safely replace a TOML file: backup existing content, write via
- * temp+rename, verify the result parses, restore original on failure.
- * TOML equivalent of safe_json_write — dedupe candidate.
- */
-async function safe_toml_write(
-	path: string,
-	data: JsonObject,
-): Promise<SafeJsonWriteResult> {
-	await mkdir(dirname(path), { recursive: true });
-
-	const existed = await file_exists(path);
-	const original_content = existed
-		? await readFile(path, 'utf-8')
-		: undefined;
-	const backup_path =
-		original_content !== undefined
-			? await create_toml_backup(path, original_content)
-			: undefined;
-
-	const tmp_path = join(
-		dirname(path),
-		`.${basename(path)}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`,
-	);
-	const next_content = stringify(data);
-
-	try {
-		await writeFile(tmp_path, next_content, 'utf-8');
-		await rename(tmp_path, path);
-
-		const written = await readFile(path, 'utf-8');
-		parse(written);
-
-		return {
-			path,
-			...(backup_path ? { backup_path } : {}),
-		};
-	} catch (error) {
-		await rm(tmp_path, { force: true }).catch(() => undefined);
-		if (original_content !== undefined) {
-			await writeFile(path, original_content, 'utf-8');
-		} else {
-			await rm(path, { force: true }).catch(() => undefined);
-		}
-		throw error;
-	}
 }
 
 /**
@@ -217,34 +111,34 @@ export const codex_adapter: McpClientAdapter = {
 		}
 
 		data[SERVER_KEY] = servers;
-		return safe_toml_write(location.path, data);
+		return safe_content_write(location.path, stringify(data), 'toml');
 	},
 	async write_server(location, server) {
 		const data = (await read_toml_file(location.path)) ?? {};
 		const servers = get_server_record(data);
 		servers[server.name] = codex_to_toml(server);
 		data[SERVER_KEY] = servers;
-		return safe_toml_write(location.path, data);
+		return safe_content_write(location.path, stringify(data), 'toml');
 	},
 	async write_server_config(location, name, config) {
 		const data = (await read_toml_file(location.path)) ?? {};
 		const servers = get_server_record(data);
 		servers[name] = config;
 		data[SERVER_KEY] = servers;
-		return safe_toml_write(location.path, data);
+		return safe_content_write(location.path, stringify(data), 'toml');
 	},
 	async remove_server(location, name) {
 		const data = (await read_toml_file(location.path)) ?? {};
 		const servers = get_server_record(data);
 		delete servers[name];
 		data[SERVER_KEY] = servers;
-		return safe_toml_write(location.path, data);
+		return safe_content_write(location.path, stringify(data), 'toml');
 	},
 	async write_servers(location, servers) {
 		const data = (await read_toml_file(location.path)) ?? {};
 		data[SERVER_KEY] = Object.fromEntries(
 			servers.map((server) => [server.name, codex_to_toml(server)]),
 		);
-		return safe_toml_write(location.path, data);
+		return safe_content_write(location.path, stringify(data), 'toml');
 	},
 };
