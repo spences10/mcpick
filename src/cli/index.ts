@@ -47,6 +47,8 @@ const main = defineCommand({
 		rollback: () =>
 			import('./commands/rollback.js').then((m) => m.default),
 		serve: () => import('./commands/serve.js').then((m) => m.default),
+		search: () =>
+			import('./commands/search.js').then((m) => m.default),
 	},
 });
 
