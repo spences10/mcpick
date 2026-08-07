@@ -419,3 +419,120 @@ describe('client adapters', () => {
 		).not.toContain('cline');
 	});
 });
+
+describe('claude-desktop adapter', () => {
+	const original_home = process.env.HOME;
+
+	afterEach(() => {
+		if (original_home === undefined) {
+			delete process.env.HOME;
+		} else {
+			process.env.HOME = original_home;
+		}
+	});
+
+	async function temp_home(): Promise<string> {
+		const home = await mkdtemp(
+			join(tmpdir(), 'mcpick-claude-desktop-'),
+		);
+		process.env.HOME = home;
+		return home;
+	}
+
+	function expected_config_path(home: string): string {
+		if (process.platform === 'darwin') {
+			return join(
+				home,
+				'Library/Application Support/Claude/claude_desktop_config.json',
+			);
+		}
+		if (process.platform === 'win32') {
+			return join(
+				process.env.APPDATA ?? join(home, 'AppData/Roaming'),
+				'Claude/claude_desktop_config.json',
+			);
+		}
+		return join(home, '.config/Claude/claude_desktop_config.json');
+	}
+
+	it('exposes exactly one user-scope location at the per-OS path', async () => {
+		const home = await temp_home();
+		const adapter = get_client_adapter('claude-desktop');
+		expect(adapter).not.toBeNull();
+		expect(adapter!.label).toBe('Claude Desktop');
+
+		const locations = adapter!.locations();
+		expect(locations).toHaveLength(1);
+		expect(locations[0].scope).toBe('user');
+		expect(locations[0].path).toBe(expected_config_path(home));
+	});
+
+	it('reads servers from the user config', async () => {
+		const home = await temp_home();
+		const config_path = expected_config_path(home);
+		await mkdir(join(config_path, '..'), { recursive: true });
+		await writeFile(
+			config_path,
+			JSON.stringify({
+				mcpServers: {
+					filesystem: {
+						command: 'npx',
+						args: ['-y', '@modelcontextprotocol/server-filesystem'],
+						env: { NODE_ENV: 'production' },
+					},
+				},
+			}),
+		);
+
+		const adapter = get_client_adapter('claude-desktop');
+		await expect(adapter!.read('user')).resolves.toEqual([
+			{
+				name: 'filesystem',
+				transport: 'stdio',
+				command: 'npx',
+				args: ['-y', '@modelcontextprotocol/server-filesystem'],
+				env: { NODE_ENV: 'production' },
+			},
+		]);
+	});
+
+	it('writes, disables, and removes servers round-trip', async () => {
+		const home = await temp_home();
+		const config_path = expected_config_path(home);
+		const adapter = get_client_adapter('claude-desktop');
+		expect(adapter).not.toBeNull();
+		const location = adapter!.locations()[0];
+
+		await adapter!.write_server!(location, {
+			name: 'memory',
+			transport: 'stdio',
+			command: 'npx',
+			args: ['-y', 'server-memory@1.2.3'],
+		});
+		await adapter!.write_server!(location, {
+			name: 'remote',
+			transport: 'http',
+			url: 'https://mcp.example',
+		});
+
+		let written = JSON.parse(await readFile(config_path, 'utf-8'));
+		expect(written.mcpServers.memory).toEqual({
+			command: 'npx',
+			args: ['-y', 'server-memory@1.2.3'],
+		});
+		expect(written.mcpServers.remote).toEqual({
+			type: 'http',
+			url: 'https://mcp.example',
+		});
+
+		await adapter!.writeEnabled!(location, ['remote']);
+		written = JSON.parse(await readFile(config_path, 'utf-8'));
+		expect(written.mcpServers.memory.disabled).toBe(true);
+		expect(written.mcpServers.remote.disabled).toBe(false);
+
+		await adapter!.remove_server!(location, 'memory');
+		written = JSON.parse(await readFile(config_path, 'utf-8'));
+		expect(written.mcpServers.memory).toBeUndefined();
+		expect(written.mcpServers.remote).toBeDefined();
+	});
+});

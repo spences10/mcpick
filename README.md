@@ -79,6 +79,7 @@ Supported client adapters:
 | --------------------- | -------------------- | ------------------------------------------------- |
 | Claude Code           | local, project, user | `mcpick list`, `mcpick enable <server>`           |
 | Claude Desktop        | user                 | `mcpick list --client claude-desktop`             |
+| Codex CLI             | user                 | `mcpick list --client codex`                      |
 | Gemini CLI            | project, user        | `mcpick list --client gemini-cli --scope project` |
 | VS Code / Copilot     | project              | `mcpick list --client vscode --scope project`     |
 | Cursor                | project, user        | `mcpick list --client cursor --scope user`        |

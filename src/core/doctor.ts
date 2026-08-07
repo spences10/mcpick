@@ -1,6 +1,7 @@
 import { constants } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
 import { delimiter, join } from 'node:path';
+import { parse as parse_toml } from 'smol-toml';
 import type { McpClientId, McpClientScope } from '../types.js';
 import {
 	detect_unpinned_package,
@@ -65,12 +66,14 @@ type ServerKey = (typeof server_keys)[number];
 /** Top-level server-map key each client expects in its config files. */
 const client_server_key: Record<McpClientId, ServerKey> = {
 	'claude-code': 'mcpServers',
+	'claude-desktop': 'mcpServers',
 	'gemini-cli': 'mcpServers',
 	vscode: 'servers',
 	cursor: 'mcpServers',
 	windsurf: 'mcpServers',
 	opencode: 'mcp',
 	pi: 'mcpServers',
+	codex: 'mcp_servers',
 };
 
 /**
@@ -112,15 +115,15 @@ export async function run_doctor(
 
 			checked_paths.add(location.path);
 
-			const data = parse_json_or_jsonc(raw);
+			const data = parse_config_text(adapter.id, location.path, raw);
 			if (data === undefined) {
+				const format = adapter.id === 'codex' ? 'TOML' : 'JSON/JSONC';
 				issues.push({
 					severity: 'error',
 					check: 'config-parse',
 					client: adapter.id,
 					path: location.path,
-					message:
-						'Config file exists but is not valid JSON/JSONC; the client will fail to load it.',
+					message: `Config file exists but is not valid ${format}; the client will fail to load it.`,
 					remediation:
 						'Fix the JSON syntax (or restore from a backup with `mcpick restore`).',
 				});
@@ -180,6 +183,22 @@ async function read_text_file(path: string): Promise<string | null> {
 	} catch {
 		return null;
 	}
+}
+
+function parse_config_text(
+	client: McpClientId,
+	path: string,
+	raw: string,
+): JsonObject | undefined {
+	if (client === 'codex' || path.endsWith('.toml')) {
+		try {
+			const parsed = parse_toml(raw);
+			return is_object(parsed) ? parsed : undefined;
+		} catch {
+			return undefined;
+		}
+	}
+	return parse_json_or_jsonc(raw);
 }
 
 function parse_json_or_jsonc(

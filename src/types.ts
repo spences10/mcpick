@@ -17,6 +17,8 @@ export interface ClaudeConfig {
 
 export type McpClientId =
 	| 'claude-code'
+	| 'claude-desktop'
+	| 'codex'
 	| 'gemini-cli'
 	| 'vscode'
 	| 'cursor'

@@ -12,6 +12,7 @@ import {
 	safe_json_write,
 	type SafeJsonWriteResult,
 } from '../utils/safe-apply.js';
+import { codex_adapter } from './codex-adapter.js';
 
 export type {
 	McpClientId,
@@ -547,6 +548,28 @@ function project_path(path: string): string {
 	return join(process.cwd(), path);
 }
 
+/**
+ * Per-OS location of the claude desktop config file.
+ * Note: Windows MSIX (Microsoft Store) installs keep this file under the
+ * packaged app data path rather than %APPDATA% — documented here, but we
+ * do not try to detect that variant.
+ */
+function claude_desktop_config_path(): string {
+	if (process.platform === 'darwin') {
+		return join(
+			homedir(),
+			'Library/Application Support/Claude/claude_desktop_config.json',
+		);
+	}
+	if (process.platform === 'win32') {
+		return join(
+			process.env.APPDATA ?? join(homedir(), 'AppData/Roaming'),
+			'Claude/claude_desktop_config.json',
+		);
+	}
+	return join(homedir(), '.config/Claude/claude_desktop_config.json');
+}
+
 export const client_adapters: McpClientAdapter[] = [
 	{
 		id: 'claude-code',
@@ -653,6 +676,18 @@ export const client_adapters: McpClientAdapter[] = [
 		},
 	},
 	create_json_adapter({
+		id: 'claude-desktop',
+		label: 'Claude Desktop',
+		serverKey: 'mcpServers',
+		locations: () => [
+			{
+				scope: 'user',
+				path: claude_desktop_config_path(),
+				description: 'claude_desktop_config.json mcpServers',
+			},
+		],
+	}),
+	create_json_adapter({
 		id: 'gemini-cli',
 		label: 'Gemini CLI',
 		serverKey: 'mcpServers',
@@ -756,6 +791,7 @@ export const client_adapters: McpClientAdapter[] = [
 			},
 		],
 	}),
+	codex_adapter,
 ];
 
 export function get_client_adapter(
