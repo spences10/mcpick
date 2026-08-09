@@ -13,10 +13,10 @@ importers:
         version: 1.7.0
       '@tmcp/adapter-valibot':
         specifier: ^0.1.6
-        version: 0.1.6(tmcp@1.20.0-next.0)(valibot@1.4.2)
+        version: 0.1.6(tmcp@1.20.0-next.1)(valibot@1.4.2)
       '@tmcp/transport-stdio':
         specifier: 0.5.0-next.0
-        version: 0.5.0-next.0(tmcp@1.20.0-next.0)
+        version: 0.5.0-next.0(tmcp@1.20.0-next.1)
       citty:
         specifier: ^0.2.2
         version: 0.2.2
@@ -24,8 +24,8 @@ importers:
         specifier: ^1.7.1
         version: 1.7.1
       tmcp:
-        specifier: 1.20.0-next.0
-        version: 1.20.0-next.0
+        specifier: 1.20.0-next.1
+        version: 1.20.0-next.1
       valibot:
         specifier: ^1.4.0
         version: 1.4.2
@@ -41,7 +41,7 @@ importers:
         version: 0.2.7(@types/node@25.9.5)(vite@8.0.16(@types/node@25.9.5))
       vitest:
         specifier: ^4.1.6
-        version: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10(vite@8.0.16(@types/node@25.9.5))(vitest@4.1.10))(vite@8.0.16(@types/node@25.9.5))
+        version: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10)(vite@8.0.16(@types/node@25.9.5))
 
 packages:
 
@@ -1426,8 +1426,8 @@ packages:
     resolution: {integrity: sha512-yau8yJdTt989Mm0Bd/236QnzEiPf2xLLTqUZRUJOo/3CB078LSwzei343DgtJVmfJKJE3TMINY1u42SQsP6mXw==}
     engines: {node: '>=14.0.0'}
 
-  tmcp@1.20.0-next.0:
-    resolution: {integrity: sha512-j4pscf9+L0oBacyTf61IYnEucm47U8fuNSyEoa1WAl5vORUBgdJZSIL/DrF163Kv8gZPo3hQYG1d6scH/Thz7Q==}
+  tmcp@1.20.0-next.1:
+    resolution: {integrity: sha512-InQcjBBHgZvcQvEIK86CtFZFl/Tq2OO8ry8mWynn7uHvO7BCYdk56rzoRImFK5MIJJ8k0L0a/z7kL9YOHPQUaw==}
 
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -2022,22 +2022,22 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.1
 
-  '@tmcp/adapter-valibot@0.1.6(tmcp@1.20.0-next.0)(valibot@1.4.2)':
+  '@tmcp/adapter-valibot@0.1.6(tmcp@1.20.0-next.1)(valibot@1.4.2)':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@valibot/to-json-schema': 1.7.1(valibot@1.4.2)
-      tmcp: 1.20.0-next.0
+      tmcp: 1.20.0-next.1
       valibot: 1.4.2
 
-  '@tmcp/session-manager@0.3.0-next.0(tmcp@1.20.0-next.0)':
+  '@tmcp/session-manager@0.3.0-next.0(tmcp@1.20.0-next.1)':
     dependencies:
       json-rpc-2.0: 1.7.1
-      tmcp: 1.20.0-next.0
+      tmcp: 1.20.0-next.1
 
-  '@tmcp/transport-stdio@0.5.0-next.0(tmcp@1.20.0-next.0)':
+  '@tmcp/transport-stdio@0.5.0-next.0(tmcp@1.20.0-next.1)':
     dependencies:
-      '@tmcp/session-manager': 0.3.0-next.0(tmcp@1.20.0-next.0)
-      tmcp: 1.20.0-next.0
+      '@tmcp/session-manager': 0.3.0-next.0(tmcp@1.20.0-next.1)
+      tmcp: 1.20.0-next.1
 
   '@tybys/wasm-util@0.10.3':
     dependencies:
@@ -2070,7 +2070,7 @@ snapshots:
       '@testing-library/dom': 10.4.1
       '@testing-library/user-event': 14.6.1(@testing-library/dom@10.4.1)
       '@vitest/browser': 4.1.10(vite@8.0.16(@types/node@25.9.5))(vitest@4.1.10)
-      vitest: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10(vite@8.0.16(@types/node@25.9.5))(vitest@4.1.10))(vite@8.0.16(@types/node@25.9.5))
+      vitest: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10)(vite@8.0.16(@types/node@25.9.5))
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -2086,7 +2086,7 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10(vite@8.0.16(@types/node@25.9.5))(vitest@4.1.10))(vite@8.0.16(@types/node@25.9.5))
+      vitest: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10)(vite@8.0.16(@types/node@25.9.5))
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
@@ -2710,7 +2710,7 @@ snapshots:
 
   tinyrainbow@3.1.1: {}
 
-  tmcp@1.20.0-next.0:
+  tmcp@1.20.0-next.1:
     dependencies:
       '@standard-schema/spec': 1.1.0
       json-rpc-2.0: 1.7.1
@@ -2754,7 +2754,7 @@ snapshots:
       oxfmt: 0.60.0(vite-plus@0.2.7(@types/node@25.9.5)(vite@8.0.16(@types/node@25.9.5)))
       oxlint: 1.75.0(oxlint-tsgolint@7.0.2001)(vite-plus@0.2.7(@types/node@25.9.5)(vite@8.0.16(@types/node@25.9.5)))
       oxlint-tsgolint: 7.0.2001
-      vitest: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10(vite@8.0.16(@types/node@25.9.5))(vitest@4.1.10))(vite@8.0.16(@types/node@25.9.5))
+      vitest: 4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10)(vite@8.0.16(@types/node@25.9.5))
     optionalDependencies:
       '@voidzero-dev/vite-plus-darwin-arm64': 0.2.7
       '@voidzero-dev/vite-plus-darwin-x64': 0.2.7
@@ -2806,7 +2806,7 @@ snapshots:
       '@types/node': 25.9.5
       fsevents: 2.3.3
 
-  vitest@4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10(vite@8.0.16(@types/node@25.9.5))(vitest@4.1.10))(vite@8.0.16(@types/node@25.9.5)):
+  vitest@4.1.10(@types/node@25.9.5)(@vitest/browser-preview@4.1.10)(vite@8.0.16(@types/node@25.9.5)):
     dependencies:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(vite@8.0.16(@types/node@25.9.5))
