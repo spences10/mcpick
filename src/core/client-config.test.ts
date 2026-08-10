@@ -317,6 +317,11 @@ describe('client adapters', () => {
 			false,
 		);
 		await remove_client_server(adapter!, location, 'memory');
+		await expect(
+			remove_client_server(adapter!, location, 'missing'),
+		).rejects.toThrow(
+			`Server 'missing' not found at ${config_path}.`,
+		);
 
 		const written = JSON.parse(await readFile(config_path, 'utf-8'));
 		expect(written.servers.memory).toBeUndefined();

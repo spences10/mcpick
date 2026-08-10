@@ -91,24 +91,17 @@ export async function read_server_registry(): Promise<ServerRegistry> {
 		await access(registry_path);
 		const registry_content = await readFile(registry_path, 'utf-8');
 		const parsed_registry = JSON.parse(registry_content);
-		const registry = parse_portable_registry(parsed_registry);
-		if (parsed_registry.version !== 3) {
-			await write_server_registry(registry);
-		}
-		return registry;
+		return parse_portable_registry(parsed_registry);
 	} catch (error) {
 		if (
 			error instanceof Error &&
 			'code' in error &&
 			error.code === 'ENOENT'
 		) {
-			await ensure_directory_exists(get_mcpick_dir());
-			const default_registry: ServerRegistry = {
+			return {
 				version: 3,
 				servers: [],
 			};
-			await write_server_registry(default_registry);
-			return default_registry;
 		}
 		throw error;
 	}

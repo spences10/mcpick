@@ -238,6 +238,30 @@ describe('CLI subprocess integration', () => {
 		).toBeUndefined();
 	});
 
+	it('rejects removal of a missing client server as JSON', async () => {
+		const ctx = await fixture();
+		await mkdir(join(ctx.project, '.vscode'), { recursive: true });
+		await writeFile(
+			join(ctx.project, '.vscode/mcp.json'),
+			JSON.stringify({ servers: {} }),
+		);
+
+		const result = await run_cli(ctx, [
+			'remove',
+			'missing',
+			'--client',
+			'vscode',
+			'--scope',
+			'project',
+			'--json',
+		]);
+
+		expect(result.status).toBe(1);
+		expect(JSON.parse(result.stdout)).toMatchObject({
+			error: expect.stringContaining("Server 'missing' not found"),
+		});
+	});
+
 	it('lists and restores rollback backups', async () => {
 		const ctx = await fixture();
 		await mkdir(join(ctx.project, '.vscode'), { recursive: true });

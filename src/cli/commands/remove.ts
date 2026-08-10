@@ -164,8 +164,12 @@ async function remove_from_client(
 			print_mutation_details(mutation);
 		}
 	} catch (err) {
-		error(
-			err instanceof Error ? err.message : 'Failed to remove server',
-		);
+		const message =
+			err instanceof Error ? err.message : 'Failed to remove server';
+		if (json) {
+			output({ error: message }, true);
+			process.exit(1);
+		}
+		error(message);
 	}
 }

@@ -908,6 +908,12 @@ export async function remove_client_server(
 			`${adapter.label} support cannot remove servers yet.`,
 		);
 	}
+	const servers = await adapter.readLocation(location);
+	if (!servers.some((server) => server.name === server_name)) {
+		throw new Error(
+			`Server '${server_name}' not found at ${location.path}.`,
+		);
+	}
 	const write_result = await adapter.remove_server(
 		location,
 		server_name,

@@ -38,26 +38,24 @@ afterEach(() => {
 });
 
 describe('server registry', () => {
-	it('migrates legacy Claude-shaped registries to portable version 3', async () => {
+	it('reads legacy Claude-shaped registries as portable version 3 without rewriting them', async () => {
 		const claude_dir = await temp_claude_dir();
 		const registry_path = join(claude_dir, 'mcpick', 'servers.json');
-		await writeFile(
-			registry_path,
-			JSON.stringify({
-				servers: [
-					{
-						name: 'memory',
-						command: 'npx',
-						args: ['memory'],
-					},
-					{
-						name: 'remote',
-						type: 'http',
-						url: 'https://mcp.example',
-					},
-				],
-			}),
-		);
+		const legacy_content = JSON.stringify({
+			servers: [
+				{
+					name: 'memory',
+					command: 'npx',
+					args: ['memory'],
+				},
+				{
+					name: 'remote',
+					type: 'http',
+					url: 'https://mcp.example',
+				},
+			],
+		});
+		await writeFile(registry_path, legacy_content);
 
 		const registry = await read_server_registry();
 
@@ -77,9 +75,22 @@ describe('server registry', () => {
 				},
 			],
 		});
-		expect(
-			JSON.parse(await readFile(registry_path, 'utf-8')).version,
-		).toBe(3);
+		expect(await readFile(registry_path, 'utf-8')).toBe(
+			legacy_content,
+		);
+	});
+
+	it('does not create a missing registry while reading', async () => {
+		const claude_dir = await temp_claude_dir();
+		const registry_path = join(claude_dir, 'mcpick', 'servers.json');
+
+		await expect(read_server_registry()).resolves.toEqual({
+			version: 3,
+			servers: [],
+		});
+		await expect(
+			readFile(registry_path, 'utf-8'),
+		).rejects.toMatchObject({ code: 'ENOENT' });
 	});
 
 	it('stores newly added Claude servers as portable registry entries', async () => {
