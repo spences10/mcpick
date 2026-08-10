@@ -12,6 +12,7 @@ import { run_doctor } from './doctor.js';
 const original_cwd = process.cwd();
 const original_home = process.env.HOME;
 const original_config_dir = process.env.CLAUDE_CONFIG_DIR;
+const original_mcpick_config_dir = process.env.MCPICK_CONFIG_DIR;
 
 afterEach(() => {
 	process.chdir(original_cwd);
@@ -24,6 +25,11 @@ afterEach(() => {
 		delete process.env.CLAUDE_CONFIG_DIR;
 	} else {
 		process.env.CLAUDE_CONFIG_DIR = original_config_dir;
+	}
+	if (original_mcpick_config_dir === undefined) {
+		delete process.env.MCPICK_CONFIG_DIR;
+	} else {
+		process.env.MCPICK_CONFIG_DIR = original_mcpick_config_dir;
 	}
 });
 
@@ -42,6 +48,7 @@ async function temp_env(): Promise<{
 	);
 	process.env.HOME = home;
 	delete process.env.CLAUDE_CONFIG_DIR;
+	process.env.MCPICK_CONFIG_DIR = join(home, '.config', 'mcpick');
 	process.chdir(project);
 	return { home, project };
 }
