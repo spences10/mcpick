@@ -111,9 +111,17 @@ npx mcpick disable <server> --scope local
 
 # Add/remove Claude Code server definitions
 npx mcpick add --name <server> --command npx --args "-y,package-name"
+npx mcpick add --from-registry io.github.user/server
 npx mcpick add-json <name> '{"command":"npx","args":["-y","package-name"]}'
 npx mcpick remove <server>
 ```
+
+`add --from-registry` requires an exact official MCP Registry name and
+writes the package's exact published version. It currently supports
+npm packages using stdio; unsupported package types fail without
+writing a guessed configuration. Registry-declared required
+environment variables must be supplied with `--from-env` or `--env`.
+`--dry-run` works for adapter-backed clients.
 
 MCPick warns when a value you write looks like a secret, redacts
 printed output, and `npx mcpick doctor` flags plaintext secrets

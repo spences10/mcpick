@@ -6,6 +6,8 @@ import {
 	PortableMcpServer,
 	resolve_client_location,
 } from '../../core/client-config.js';
+import { find_registry_server } from '../../core/registry-api.js';
+import { registry_install_config } from '../../core/registry-install.js';
 import { add_server_to_registry } from '../../core/registry.js';
 import { validate_mcp_server } from '../../core/validation.js';
 import { McpScope } from '../../types.js';
@@ -28,7 +30,8 @@ import {
 import { error, output } from '../output.js';
 
 interface AddArgs {
-	name: string;
+	name?: string;
+	from_registry?: string;
 	command?: string;
 	args?: string;
 	url?: string;
@@ -52,7 +55,11 @@ export default defineCommand({
 		name: {
 			type: 'string',
 			description: 'Server name',
-			required: true,
+		},
+		from_registry: {
+			type: 'string',
+			description:
+				'Exact official MCP Registry server name; installs a pinned npm stdio package',
 		},
 		command: {
 			type: 'string',
@@ -114,19 +121,58 @@ export default defineCommand({
 		},
 	},
 	async run({ args }) {
-		const transport = args.type as 'stdio' | 'sse' | 'http';
-		if (!['stdio', 'sse', 'http'].includes(transport)) {
-			error(`Invalid type: ${transport}. Use stdio, sse, or http.`);
-		}
-
 		const add_args = args as AddArgs;
 		const dry_run = is_dry_run_arg(args);
-		const portable = build_portable_server(add_args, transport);
+		const registry_name = add_args.from_registry;
+		const transport = args.type as 'stdio' | 'sse' | 'http';
+		if (
+			!registry_name &&
+			!['stdio', 'sse', 'http'].includes(transport)
+		) {
+			error(`Invalid type: ${transport}. Use stdio, sse, or http.`);
+		}
+		if (!registry_name && !add_args.name) {
+			error('--name or --from-registry is required');
+		}
+		let required_env: string[] = [];
+		let portable: PortableMcpServer;
+		if (registry_name) {
+			try {
+				const registry_entry =
+					await find_registry_server(registry_name);
+				const registry_install =
+					registry_install_config(registry_entry);
+				portable = registry_install.server;
+				required_env = registry_install.required_env;
+			} catch (err) {
+				error(
+					err instanceof Error
+						? err.message
+						: 'Registry install lookup failed',
+				);
+			}
+		} else {
+			portable = build_portable_server(add_args, transport);
+		}
 
 		// Fail before any write if a --from-env variable is missing.
 		const from_env = resolve_from_env_flag(add_args.from_env);
 		if (Object.keys(from_env).length > 0) {
 			portable.env = { ...portable.env, ...from_env };
+		}
+		if (add_args.env && registry_name) {
+			portable.env = {
+				...portable.env,
+				...parse_key_value_pairs(add_args.env),
+			};
+		}
+		const missing_required = required_env.filter(
+			(name) => !portable.env?.[name],
+		);
+		if (missing_required.length > 0) {
+			error(
+				`Registry package requires environment variable '${missing_required[0]}'. Provide it with --from-env ${missing_required[0]}.`,
+			);
 		}
 
 		// Non-blocking write-time warnings (secrets, version pinning).
@@ -157,7 +203,9 @@ export default defineCommand({
 
 		const server_data: Record<string, unknown> = {
 			name: portable.name,
-			...(transport !== 'stdio' ? { type: transport } : {}),
+			...(portable.transport !== 'stdio'
+				? { type: portable.transport }
+				: {}),
 			...(portable.command ? { command: portable.command } : {}),
 			...(portable.args ? { args: portable.args } : {}),
 			...(portable.url ? { url: portable.url } : {}),
@@ -217,6 +265,7 @@ function build_portable_server(
 	args: AddArgs,
 	transport: 'stdio' | 'sse' | 'http',
 ): PortableMcpServer {
+	if (!args.name) error('--name is required');
 	const server: PortableMcpServer = { name: args.name, transport };
 	if (transport === 'stdio') {
 		if (!args.command)

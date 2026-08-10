@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { search_registry } from './registry-api.js';
+import {
+	find_registry_server,
+	search_registry,
+} from './registry-api.js';
 
 function registry_response(entries: unknown[]) {
 	return {
@@ -100,6 +103,27 @@ describe('search_registry', () => {
 				],
 			},
 		]);
+	});
+
+	it('finds an exact server name from search results', async () => {
+		stub_fetch(
+			registry_response([
+				entry('io.example/similar'),
+				entry('io.example/exact'),
+			]),
+		);
+
+		await expect(
+			find_registry_server('io.example/exact'),
+		).resolves.toMatchObject({ name: 'io.example/exact' });
+	});
+
+	it('rejects search results without the exact server name', async () => {
+		stub_fetch(registry_response([entry('io.example/similar')]));
+
+		await expect(
+			find_registry_server('io.example/missing'),
+		).rejects.toThrow("Server 'io.example/missing' not found");
 	});
 
 	it('keeps only the latest version of each server', async () => {

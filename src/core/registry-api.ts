@@ -30,7 +30,9 @@
  */
 import { readFileSync } from 'node:fs';
 
-const REGISTRY_BASE_URL = 'https://registry.modelcontextprotocol.io';
+const REGISTRY_BASE_URL =
+	process.env.MCPICK_REGISTRY_URL ??
+	'https://registry.modelcontextprotocol.io';
 const REQUEST_TIMEOUT_MS = 10_000;
 
 export interface RegistryPackage {
@@ -39,10 +41,16 @@ export interface RegistryPackage {
 	version?: string;
 	runtimeHint?: string;
 	transport?: { type: string };
-	runtimeArguments?: Array<{ value: string; type: string }>;
+	runtimeArguments?: Array<{
+		type: string;
+		name?: string;
+		value?: string;
+		isRequired?: boolean;
+	}>;
 	environmentVariables?: Array<{
 		name: string;
 		description?: string;
+		default?: string;
 		isRequired?: boolean;
 		isSecret?: boolean;
 	}>;
@@ -124,6 +132,20 @@ function official_meta(entry: RawServerEntry): OfficialMeta {
 	return (
 		entry._meta?.['io.modelcontextprotocol.registry/official'] ?? {}
 	);
+}
+
+/** Find an exact server name through the registry search API. */
+export async function find_registry_server(
+	name: string,
+): Promise<RegistryServer> {
+	const results = await search_registry(name, 100);
+	const exact = results.find((server) => server.name === name);
+	if (!exact) {
+		throw new Error(
+			`Server '${name}' not found in the MCP registry.`,
+		);
+	}
+	return exact;
 }
 
 /**

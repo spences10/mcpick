@@ -7,6 +7,8 @@ import {
 	readdir,
 	writeFile,
 } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,6 +47,7 @@ async function fixture(): Promise<CliFixture> {
 function run_cli(
 	ctx: CliFixture,
 	args: string[],
+	env: Record<string, string> = {},
 ): Promise<CliResult> {
 	return new Promise((resolve_result) => {
 		const child = spawn(process.execPath, [cli_bin, ...args], {
@@ -57,6 +60,7 @@ function run_cli(
 				MCPICK_CONFIG_DIR: join(ctx.root, 'mcpick-state'),
 				NO_COLOR: '1',
 				FORCE_COLOR: '0',
+				...env,
 			},
 			stdio: ['ignore', 'pipe', 'pipe'],
 		});
@@ -238,6 +242,77 @@ describe('--dry-run mutations', () => {
 		expect(payload.message).toContain('--client');
 		// No claude config written, no backup.
 		expect(await backup_files(ctx)).toEqual([]);
+	});
+
+	it('add --from-registry produces a pinned dry-run preview', async () => {
+		const ctx = await fixture();
+		await write_cursor_config(ctx, {});
+		const server = createServer((_request, response) => {
+			response.setHeader('content-type', 'application/json');
+			response.end(
+				JSON.stringify({
+					servers: [
+						{
+							server: {
+								name: 'io.example/registry-server',
+								description: 'Registry server',
+								version: '1.2.3',
+								packages: [
+									{
+										registryType: 'npm',
+										identifier: '@example/server',
+										version: '1.2.3',
+										runtimeHint: 'npx',
+										transport: { type: 'stdio' },
+									},
+								],
+							},
+							_meta: {
+								'io.modelcontextprotocol.registry/official': {
+									isLatest: true,
+								},
+							},
+						},
+					],
+				}),
+			);
+		});
+		await new Promise<void>((resolve_listen) =>
+			server.listen(0, '127.0.0.1', resolve_listen),
+		);
+		const address = server.address() as AddressInfo;
+
+		try {
+			const result = await run_cli(
+				ctx,
+				[
+					'add',
+					'--from-registry',
+					'io.example/registry-server',
+					'--client',
+					'cursor',
+					'--scope',
+					'project',
+					'--dry-run',
+					'--json',
+				],
+				{
+					MCPICK_REGISTRY_URL: `http://127.0.0.1:${address.port}`,
+				},
+			);
+
+			expect(result.status, result.stderr).toBe(0);
+			const payload = JSON.parse(result.stdout);
+			expect(payload.dry_run).toBe(true);
+			expect(payload.diff).toContain('@example/server@1.2.3');
+			expect(payload.diff).toContain('io.example/registry-server');
+		} finally {
+			await new Promise<void>((resolve_close, reject_close) =>
+				server.close((err) =>
+					err ? reject_close(err) : resolve_close(),
+				),
+			);
+		}
 	});
 
 	it('add --client cursor --dry-run still emits secret warnings', async () => {
