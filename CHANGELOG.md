@@ -1,5 +1,35 @@
 # mcpick
 
+## 0.2.0
+
+### Minor Changes
+
+- 4556c51: Move mcpick state to XDG config dir with automatic legacy
+  migration and MCPICK_CONFIG_DIR override
+- 2c443a5: Add --dry-run to mutations: preview the exact config diff
+  before any write happens
+- f875000: Detect skill drift in doctor: pinned installs compared
+  against upstream, unpinned flagged
+- 9ad12df: Add doctor and skill preview to the interactive TUI, fix
+  stale skills menu hint
+- 4121fe0: Restore and roll back TOML backups; Codex mutations gain
+  dry-run previews
+- 4222768: Add mcpick search: discover servers in the official MCP
+  Registry with trust signals
+- 9e2a6bd: Add mcpick serve: expose list, doctor, and config mutations
+  as MCP tools over stdio
+- 188ea9e: Add Claude Desktop and Codex CLI adapters; doctor now
+  validates Codex TOML configs
+- 5bbde2b: Add pinned npm stdio installs from exact official MCP
+  Registry server names
+
+### Patch Changes
+
+- 200344a: Reject removal of missing client servers and keep registry
+  reads free of filesystem writes
+- f6fd10a: Redact quoted JSON secret pairs and GitHub/GitLab/Slack
+  token patterns in output
+
 ## 0.1.0
 
 ### Minor Changes
