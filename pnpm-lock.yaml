@@ -15,8 +15,8 @@ importers:
         specifier: ^0.1.6
         version: 0.1.6(tmcp@1.20.0)(valibot@1.4.2)
       '@tmcp/transport-stdio':
-        specifier: 0.5.0-next.0
-        version: 0.5.0-next.0(tmcp@1.20.0)
+        specifier: 0.5.0
+        version: 0.5.0(tmcp@1.20.0)
       citty:
         specifier: ^0.2.2
         version: 0.2.2
@@ -571,13 +571,13 @@ packages:
       tmcp: ^1.17.0
       valibot: ^1.1.0
 
-  '@tmcp/session-manager@0.3.0-next.0':
-    resolution: {integrity: sha512-w5KF92ijShe38lLZSoiOJjndqocsjJYaiNkLVnlR/sLG4hArEKe3ZQ262CN7uPzj8g9N4mzJdcSGC2SC7vNv4Q==}
+  '@tmcp/session-manager@0.3.0':
+    resolution: {integrity: sha512-L16r8qlzXUoS0ec7kuap1P1nQorCcZHHUFe7UGijwwrfBRXB0hFnfC+/BM1PVdGlM7Ade8YxomecybQN5imYXA==}
     peerDependencies:
       tmcp: ^1.20.0-next.0 || ^1.20.0
 
-  '@tmcp/transport-stdio@0.5.0-next.0':
-    resolution: {integrity: sha512-0+U0DPYg97LFVzEK1sEyvvNBX8GSYpehlUKxvjHn9HqFEa9zpMvL/m5nWeJD5zxra+kOKllHeRAw7eyZK/Szew==}
+  '@tmcp/transport-stdio@0.5.0':
+    resolution: {integrity: sha512-1NZsGDveDraa/KWsOOn8VybPn5PbYJi5hRWuIRUKIX7joa3Lx7tSf+0EeXwzG1OyPlsEeTNagBWpBpvpfh5lpw==}
     peerDependencies:
       tmcp: ^1.20.0-next.0 || ^1.20.0
 
@@ -1730,14 +1730,14 @@ snapshots:
       tmcp: 1.20.0
       valibot: 1.4.2
 
-  '@tmcp/session-manager@0.3.0-next.0(tmcp@1.20.0)':
+  '@tmcp/session-manager@0.3.0(tmcp@1.20.0)':
     dependencies:
       json-rpc-2.0: 1.7.1
       tmcp: 1.20.0
 
-  '@tmcp/transport-stdio@0.5.0-next.0(tmcp@1.20.0)':
+  '@tmcp/transport-stdio@0.5.0(tmcp@1.20.0)':
     dependencies:
-      '@tmcp/session-manager': 0.3.0-next.0(tmcp@1.20.0)
+      '@tmcp/session-manager': 0.3.0(tmcp@1.20.0)
       tmcp: 1.20.0
 
   '@tybys/wasm-util@0.10.3':
