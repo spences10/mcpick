@@ -21,6 +21,7 @@ import { restore_config } from './commands/restore.js';
 import { run_doctor } from './core/doctor.js';
 import {
 	client_adapters,
+	config_location_key,
 	type ClientConfigLocation,
 	type McpClientAdapter,
 } from './core/client-config.js';
@@ -150,19 +151,20 @@ async function select_client_location(
 	const locations = adapter.locations();
 	if (locations.length === 1) return locations[0];
 
-	const location_path = await select({
+	const location_key = await select({
 		message: `Which ${adapter.label} configuration?`,
 		options: locations.map((location) => ({
-			value: location.path,
+			value: config_location_key(location),
 			label: `${location.scope} — ${location.description}`,
 			hint: location.path,
 		})),
 	});
 
-	if (isCancel(location_path)) return null;
+	if (isCancel(location_key)) return null;
 	return (
-		locations.find((location) => location.path === location_path) ??
-		null
+		locations.find(
+			(location) => config_location_key(location) === location_key,
+		) ?? null
 	);
 }
 
