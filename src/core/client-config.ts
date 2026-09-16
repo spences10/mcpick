@@ -27,6 +27,12 @@ export interface ClientConfigLocation {
 	description: string;
 }
 
+export function config_location_key(
+	location: ClientConfigLocation,
+): string {
+	return `${location.scope}::${location.path}`;
+}
+
 export interface McpClientAdapter {
 	id: McpClientId;
 	label: string;
