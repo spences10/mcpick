@@ -1,5 +1,12 @@
 # mcpick
 
+## 0.2.1
+
+### Patch Changes
+
+- 5e2c78a: Fix interactive Claude Code user scope selection writing to
+  local scope when both share a path
+
 ## 0.2.0
 
 ### Minor Changes
