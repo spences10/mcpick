@@ -832,7 +832,8 @@ export function resolve_client_location(
 		locations = locations.filter(
 			(location) => location.path === path,
 		);
-	} else if (scope) {
+	}
+	if (scope) {
 		locations = locations.filter(
 			(location) => location.scope === scope,
 		);
@@ -847,8 +848,8 @@ export function resolve_client_location(
 	}
 
 	throw new Error(
-		`${adapter.label} has multiple matching config locations. Pass --location with one of: ${locations
-			.map((location) => location.path)
+		`${adapter.label} has multiple matching config locations. Pass --scope with one of: ${locations
+			.map((location) => location.scope)
 			.join(', ')}`,
 	);
 }

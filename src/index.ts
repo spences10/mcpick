@@ -11,19 +11,21 @@ import {
 	text,
 } from '@clack/prompts';
 import { backup_config } from './commands/backup.js';
-import { edit_config } from './commands/edit-config.js';
+import {
+	edit_config,
+	select_config_location,
+} from './commands/edit-config.js';
 import { edit_plugins } from './commands/edit-plugins.js';
 import { manage_cache } from './commands/manage-cache.js';
 import { manage_hooks } from './commands/manage-hooks.js';
 import { manage_marketplace } from './commands/manage-marketplace.js';
 import { manage_skills } from './commands/manage-skills.js';
 import { restore_config } from './commands/restore.js';
-import { run_doctor } from './core/doctor.js';
 import {
 	client_adapters,
-	type ClientConfigLocation,
 	type McpClientAdapter,
 } from './core/client-config.js';
+import { run_doctor } from './core/doctor.js';
 import {
 	apply_profile_to_claude,
 	apply_profile_to_client,
@@ -144,28 +146,6 @@ async function select_client_adapter(): Promise<McpClientAdapter | null> {
 	);
 }
 
-async function select_client_location(
-	adapter: McpClientAdapter,
-): Promise<ClientConfigLocation | null> {
-	const locations = adapter.locations();
-	if (locations.length === 1) return locations[0];
-
-	const location_path = await select({
-		message: `Which ${adapter.label} configuration?`,
-		options: locations.map((location) => ({
-			value: location.path,
-			label: `${location.scope} — ${location.description}`,
-			hint: location.path,
-		})),
-	});
-
-	if (isCancel(location_path)) return null;
-	return (
-		locations.find((location) => location.path === location_path) ??
-		null
-	);
-}
-
 async function handle_load_profile(): Promise<void> {
 	const profiles = await list_profiles();
 
@@ -196,7 +176,10 @@ async function handle_load_profile(): Promise<void> {
 
 	const adapter = await select_client_adapter();
 	if (!adapter) return;
-	const location = await select_client_location(adapter);
+	const location = await select_config_location(
+		adapter,
+		`Which ${adapter.label} configuration?`,
+	);
 	if (!location) return;
 
 	const result = await apply_profile_to_client({
@@ -234,7 +217,10 @@ async function handle_save_profile(): Promise<void> {
 
 	const adapter = await select_client_adapter();
 	if (!adapter) return;
-	const location = await select_client_location(adapter);
+	const location = await select_config_location(
+		adapter,
+		`Which ${adapter.label} configuration?`,
+	);
 	if (!location) return;
 
 	const result = await save_profile_for_client({

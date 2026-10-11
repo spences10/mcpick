@@ -1,4 +1,4 @@
-import { multiselect, note, select } from '@clack/prompts';
+import { isCancel, multiselect, note, select } from '@clack/prompts';
 import {
 	client_adapters,
 	ClientConfigLocation,
@@ -96,26 +96,26 @@ async function edit_client_config(
 	);
 }
 
-async function select_config_location(
+export async function select_config_location(
 	adapter: McpClientAdapter,
+	message = `Which ${adapter.label} configuration do you want to edit?`,
 ): Promise<ClientConfigLocation | null> {
 	const locations = adapter.locations();
 	if (locations.length === 1) return locations[0];
 
-	const location_path = await select({
-		message: `Which ${adapter.label} configuration do you want to edit?`,
+	// Scopes can share a file (Claude Code user/local), so select the
+	// location itself rather than its path.
+	const location = await select({
+		message,
 		options: locations.map((location) => ({
-			value: location.path,
+			value: location,
 			label: `${location.scope} — ${location.description}`,
 			hint: location.path,
 		})),
 	});
 
-	if (typeof location_path === 'symbol') return null;
-	return (
-		locations.find((location) => location.path === location_path) ??
-		null
-	);
+	if (isCancel(location)) return null;
+	return location;
 }
 
 function server_hint(server: {

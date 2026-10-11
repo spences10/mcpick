@@ -423,6 +423,26 @@ describe('client adapters', () => {
 			locations.map((location) => location.client),
 		).not.toContain('cline');
 	});
+
+	it('resolves Claude Code scopes that share a config path', () => {
+		const adapter = get_client_adapter('claude-code')!;
+		const shared_path = adapter
+			.locations()
+			.find((location) => location.scope === 'user')!.path;
+
+		expect(
+			resolve_client_location(adapter, 'user', shared_path).scope,
+		).toBe('user');
+		expect(
+			resolve_client_location(adapter, 'local', shared_path).scope,
+		).toBe('local');
+		expect(() =>
+			resolve_client_location(adapter, undefined, shared_path),
+		).toThrow(/Pass --scope with one of: local, user/);
+		expect(() =>
+			resolve_client_location(adapter, 'project', shared_path),
+		).toThrow(/No Claude Code config location matches/);
+	});
 });
 
 describe('claude-desktop adapter', () => {
