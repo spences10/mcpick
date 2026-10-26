@@ -18,12 +18,18 @@ import {
 } from './safe-apply.js';
 
 const original_env = process.env.CLAUDE_CONFIG_DIR;
+const original_mcpick_env = process.env.MCPICK_CONFIG_DIR;
 
 afterEach(() => {
 	if (original_env === undefined) {
 		delete process.env.CLAUDE_CONFIG_DIR;
 	} else {
 		process.env.CLAUDE_CONFIG_DIR = original_env;
+	}
+	if (original_mcpick_env === undefined) {
+		delete process.env.MCPICK_CONFIG_DIR;
+	} else {
+		process.env.MCPICK_CONFIG_DIR = original_mcpick_env;
 	}
 });
 
@@ -35,6 +41,7 @@ describe('safe_json_write', () => {
 	it('writes JSON and backs up existing content', async () => {
 		const dir = await temp_dir();
 		process.env.CLAUDE_CONFIG_DIR = dir;
+		process.env.MCPICK_CONFIG_DIR = join(dir, 'mcpick');
 		const config_path = join(dir, 'settings.json');
 		await writeFile(config_path, '{"old":true}', 'utf-8');
 
@@ -58,6 +65,7 @@ describe('safe_json_write', () => {
 	it('restores config backups by filename', async () => {
 		const dir = await temp_dir();
 		process.env.CLAUDE_CONFIG_DIR = dir;
+		process.env.MCPICK_CONFIG_DIR = join(dir, 'mcpick');
 		const config_path = join(dir, 'settings.json');
 		await writeFile(config_path, '{"old":true}', 'utf-8');
 		const result = await safe_json_write(config_path, { next: true });
