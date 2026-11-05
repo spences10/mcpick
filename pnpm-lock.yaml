@@ -198,7 +198,7 @@ importers:
         specifier: ^1.0.0
         version: 1.4.0(@types/node@25.9.9)(yaml@2.9.0)
       vitest:
-        specifier: ^5.1.0
+        specifier: ^5.0.0
         version: 5.1.0(@types/node@25.9.9)(@vitest/browser-preview@5.0.5)(vite@8.0.16(@types/node@25.9.9)(yaml@2.9.0))
 
 packages:
